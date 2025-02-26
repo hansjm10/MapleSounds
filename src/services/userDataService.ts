@@ -74,7 +74,7 @@ export class UserDataService {
         return {
             userId: userData.userId || '',
             favorites: Array.isArray(userData.favorites) ? userData.favorites : [],
-            playlists: Array.isArray(userData.playlists) ? userData.playlists.map(p => ({
+            playlists: Array.isArray(userData.playlists) ? userData.playlists.map((p: any) => ({
                 name: p.name || 'Unnamed Playlist',
                 songs: Array.isArray(p.songs) ? p.songs : [],
                 createdAt: p.createdAt || new Date().toISOString(),
