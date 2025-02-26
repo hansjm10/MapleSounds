@@ -28,8 +28,17 @@ export class UserDataService {
     private initialized: boolean = false;
     private saveQueued: boolean = false;
 
-    constructor(dataDirectory: string = './data') {
-        this.dataPath = path.join(process.cwd(), dataDirectory, 'userdata.json');
+    constructor(dataDirectory: string = './src/data') {
+        // Try multiple possible paths to handle both development and production
+        const possiblePaths = [
+            path.join(process.cwd(), dataDirectory, 'userdata.json'),
+            path.join(process.cwd(), 'src', 'data', 'userdata.json'),
+            path.join(process.cwd(), 'data', 'userdata.json')
+        ];
+
+        // Find the first path that exists, or use the default
+        this.dataPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+        console.log('Using data path:', this.dataPath);
         this.loadData();
     }
 
@@ -138,7 +147,11 @@ export class UserDataService {
     // Favorites methods
     addToFavorites(userId: string, song: SongInfo): boolean {
         try {
+            console.log(`[DEBUG] Adding favorite for user ${userId}. Current data path: ${this.dataPath}`);
+            console.log(`[DEBUG] Song to add:`, song);
+            
             const userData = this.getUserData(userId);
+            console.log(`[DEBUG] Current user data before adding:`, userData);
 
             // Ensure mapId is a number
             const normalizedSong = {
@@ -148,19 +161,27 @@ export class UserDataService {
 
             // Check if already favorited
             if (userData.favorites.some(fav => fav.mapId === normalizedSong.mapId)) {
+                console.log(`[DEBUG] Song already in favorites`);
                 return false;
             }
 
             // Add the favorite
             userData.favorites.push(normalizedSong);
-
-            // Log the current state for debugging
-            console.log(`Adding favorite for user ${userId}, current favorites:`, userData.favorites);
+            
+            // Update the Map
+            this.data.set(userId, userData);
+            console.log(`[DEBUG] Updated user data in memory:`, this.data.get(userId));
 
             // Save data and return success/failure
             const saveResult = this.saveData();
+            console.log(`[DEBUG] Save result:`, saveResult);
+            
             if (!saveResult) {
                 console.error(`Failed to save favorites for user ${userId}`);
+            } else {
+                // Verify the save by reading the file
+                const fileContent = fs.readFileSync(this.dataPath, 'utf-8');
+                console.log(`[DEBUG] File content after save:`, fileContent);
             }
             return saveResult;
         } catch (error) {
@@ -189,8 +210,18 @@ export class UserDataService {
 
     getFavorites(userId: string): SongInfo[] {
         try {
+            console.log(`[DEBUG] Getting favorites for user ${userId}. Current data path: ${this.dataPath}`);
+            
+            // Force reload data from disk to ensure we have latest
+            this.loadData();
+            
             const userData = this.getUserData(userId);
-            console.log(`Getting favorites for user ${userId}:`, userData.favorites);
+            console.log(`[DEBUG] User data from memory:`, userData);
+            
+            // Also check file directly
+            const fileContent = fs.readFileSync(this.dataPath, 'utf-8');
+            console.log(`[DEBUG] Current file content:`, fileContent);
+            
             return userData.favorites;
         } catch (error) {
             console.error(`Error getting favorites for user ${userId}:`, error);
