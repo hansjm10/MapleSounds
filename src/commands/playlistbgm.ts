@@ -369,14 +369,19 @@ export class PlaylistbgmCommand {
             .setThumbnail('https://i.imgur.com/nGyPbIj.png')
             .setFooter({ text: 'Select a song from the dropdown menu below' });
 
-        // Create a secondary row with a shuffle button
+        // Create a secondary row with play mode buttons
         const buttonRow = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId(`shuffle_playlist_${playlistName}`)
-                    .setLabel('Play Random Song')
+                    .setLabel('Shuffle Play')
                     .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🔀')
+                    .setEmoji('🔀'),
+                new ButtonBuilder()
+                    .setCustomId(`sequential_playlist_${playlistName}`)
+                    .setLabel('Play All')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('▶️')
             );
 
         const response = await interaction.followUp({
@@ -384,28 +389,66 @@ export class PlaylistbgmCommand {
             components: [row, buttonRow]
         });
 
-        // Set up collector for the song selection
+        // Set up collector for interactions
         const collector = response.createMessageComponentCollector({
-            componentType: ComponentType.StringSelect,
             time: 60000
         });
 
-        collector.on('collect', async (selectInteraction: StringSelectMenuInteraction) => {
-            // User selected a song to play
-            await selectInteraction.deferUpdate();
+        collector.on('collect', async (componentInteraction) => {
+            if (componentInteraction.isStringSelectMenu()) {
+                await componentInteraction.deferUpdate();
 
-            const mapId = Number(selectInteraction.values[0]);
-            const selectedSong = playlist.songs.find(song => song.mapId === mapId);
+                const mapId = Number(componentInteraction.values[0]);
+                const selectedSong = playlist.songs.find(song => song.mapId === mapId);
 
-            if (!selectedSong) {
-                await interaction.followUp('Error: Song not found in playlist.');
-                return;
+                if (!selectedSong) {
+                    await interaction.followUp('Error: Song not found in playlist.');
+                    return;
+                }
+
+                // Play the selected song
+                await this.playSong(interaction, componentInteraction, selectedSong);
+                collector.stop();
+            } else if (componentInteraction.isButton()) {
+                await componentInteraction.deferUpdate();
+
+                if (componentInteraction.customId === `shuffle_playlist_${playlistName}`) {
+                    // Shuffle play mode
+                    const shuffledSongs = [...playlist.songs]
+                        .sort(() => Math.random() - 0.5);
+
+                    const playEmbed = new EmbedBuilder()
+                        .setColor('#00FF00' as ColorResolvable)
+                        .setTitle('🔀 Shuffle Play')
+                        .setDescription(`Playing ${playlist.name} in shuffle mode`)
+                        .setThumbnail('https://i.imgur.com/nGyPbIj.png');
+
+                    await interaction.followUp({ embeds: [playEmbed] });
+
+                    // Play the first song
+                    await this.playSong(interaction, componentInteraction, shuffledSongs[0]);
+
+                    // Store the shuffled playlist for future reference
+                    VoiceManager.setQueueForGuild(interaction.guildId, shuffledSongs.slice(1));
+                } else if (componentInteraction.customId === `sequential_playlist_${playlistName}`) {
+                    // Sequential play mode
+                    const playEmbed = new EmbedBuilder()
+                        .setColor('#00FF00' as ColorResolvable)
+                        .setTitle('▶️ Sequential Play')
+                        .setDescription(`Playing ${playlist.name} in order`)
+                        .setThumbnail('https://i.imgur.com/nGyPbIj.png');
+
+                    await interaction.followUp({ embeds: [playEmbed] });
+
+                    // Play the first song
+                    await this.playSong(interaction, componentInteraction, playlist.songs[0]);
+
+                    // Store the playlist for future reference
+                    VoiceManager.setQueueForGuild(interaction.guildId, playlist.songs.slice(1));
+                }
+
+                collector.stop();
             }
-
-            // Play the selected song
-            await this.playSong(interaction, selectInteraction, selectedSong);
-
-            collector.stop();
         });
 
         // Collector end handler
@@ -533,13 +576,21 @@ export class PlaylistbgmCommand {
         }
     }
 
-    // Helper method to actually play a song - updated for new VoiceManager signature
+    // Helper method to actually play a song
     private async playSong(
         commandInteraction: CommandInteraction,
-        menuInteraction: StringSelectMenuInteraction,
+        menuInteraction: Interaction,
         song: SongInfo
     ): Promise<void> {
         try {
+            if (!commandInteraction.guildId || !commandInteraction.member || !('voice' in commandInteraction.member)) {
+                await commandInteraction.followUp({
+                    content: 'Error: Cannot play in DMs or invalid member type',
+                    ephemeral: true
+                });
+                return;
+            }
+
             // Send a loading message
             const loadingEmbed = new EmbedBuilder()
                 .setColor('#3498DB' as ColorResolvable)
@@ -560,6 +611,23 @@ export class PlaylistbgmCommand {
                 return;
             }
 
+            // Get VoiceManager instance and play the BGM
+            const voiceManager = VoiceManager.getInstance();
+            const success = await voiceManager.playBgm(
+                commandInteraction.guildId,
+                commandInteraction.member,
+                stream,
+                song
+            );
+
+            if (!success) {
+                await commandInteraction.followUp({
+                    content: 'Failed to play the BGM. Make sure you are in a voice channel.',
+                    ephemeral: true
+                });
+                return;
+            }
+
             // Create a "now playing" embed
             const mapImageUrl = this.mapleApi.getMapImageUrl(song.mapId);
             const nowPlayingEmbed = new EmbedBuilder()
@@ -567,22 +635,13 @@ export class PlaylistbgmCommand {
                 .setTitle(`🎵 Now Playing: ${song.mapName}`)
                 .setDescription(`**Location:** ${song.streetName}\n**Map ID:** ${song.mapId}`)
                 .addFields(
-                    { name: 'Volume', value: `${VoiceManager.getVolume(commandInteraction.guildId!)}%`, inline: true },
+                    { name: 'Volume', value: `${VoiceManager.getVolume(commandInteraction.guildId)}%`, inline: true },
                     { name: 'Controls', value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume', inline: true },
                     { name: 'Download', value: `Download the BGM [here](https://maplestory.io/api/${song.region}/${song.version}/map/${song.mapId}/bgm)`, inline: true }
                 )
                 .setImage(mapImageUrl)
                 .setTimestamp()
                 .setFooter({ text: 'MapleStory BGM Player | From your playlist' });
-
-            // Play the audio in the voice channel - using the updated method signature
-            await VoiceManager.playAudioInChannel(
-                menuInteraction,
-                stream,
-                `${song.mapName} (${song.streetName})`,
-                song.mapId,
-                commandInteraction as unknown as Interaction
-            );
 
             // Send the now playing embed
             await commandInteraction.followUp({
@@ -591,7 +650,10 @@ export class PlaylistbgmCommand {
 
         } catch (error) {
             console.error('Error playing BGM from playlist:', error);
-            await commandInteraction.followUp('There was an error playing the BGM from your playlist.');
+            await commandInteraction.followUp({
+                content: 'There was an error playing the BGM from your playlist.',
+                ephemeral: true
+            });
         }
     }
 }
