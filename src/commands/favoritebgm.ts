@@ -6,14 +6,14 @@ import {
     EmbedBuilder,
     ColorResolvable,
 } from 'discord.js';
-import { UserDataService } from '../services/userDataService';
+import { MusicCollectionService } from '../services/musicCollectionService';
 import { VoiceManager } from '../utils/voiceManager';
 
 export class FavoritebgmCommand {
-    private userDataService: UserDataService;
+    private musicService: MusicCollectionService;
 
     constructor() {
-        this.userDataService = new UserDataService();
+        this.musicService = MusicCollectionService.getInstance();
     }
 
     data = new SlashCommandBuilder()
@@ -37,17 +37,15 @@ export class FavoritebgmCommand {
         }
 
         // Add to favorites
-        const success = this.userDataService.addToFavorites(
+        const success = this.musicService.addToFavorites(
             interaction.user.id,
             currentBgm
         );
 
         if (success) {
-            const embed = new EmbedBuilder()
+            const embed = this.musicService.createBaseEmbed('⭐ BGM Added to Favorites')
                 .setColor('#FFD700' as ColorResolvable)
-                .setTitle('⭐ BGM Added to Favorites')
                 .setDescription(`**${currentBgm.mapName}** (${currentBgm.streetName}) has been added to your favorites!`)
-                .setThumbnail('https://i.imgur.com/nGyPbIj.png')
                 .setFooter({ text: 'Use /favorites to see your favorite BGMs' });
 
             await interaction.followUp({ embeds: [embed] });

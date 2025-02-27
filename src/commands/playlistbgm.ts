@@ -12,19 +12,19 @@ import {
     StringSelectMenuInteraction,
     ButtonInteraction,
     ComponentType,
-    StringSelectMenuOptionBuilder, ChatInputCommandInteraction, Interaction,
+    StringSelectMenuOptionBuilder, 
+    ChatInputCommandInteraction, 
+    Interaction,
 } from 'discord.js';
-import { UserDataService, SongInfo } from '../services/userDataService';
+import { SongInfo } from '../services/userDataService';
 import { VoiceManager } from '../utils/voiceManager';
-import { MapleApiService } from '../services/mapleApi';
+import { MusicCollectionService } from '../services/musicCollectionService';
 
 export class PlaylistbgmCommand {
-    private userDataService: UserDataService;
-    private mapleApi: MapleApiService;
+    private musicService: MusicCollectionService;
 
     constructor() {
-        this.userDataService = new UserDataService();
-        this.mapleApi = new MapleApiService();
+        this.musicService = MusicCollectionService.getInstance();
     }
 
     data = new SlashCommandBuilder()
@@ -142,15 +142,14 @@ export class PlaylistbgmCommand {
             return;
         }
 
-        const success = this.userDataService.createPlaylist(
+        const success = this.musicService.createPlaylist(
             interaction.user.id,
             playlistName
         );
 
         if (success) {
-            const embed = new EmbedBuilder()
+            const embed = this.musicService.createBaseEmbed('🎵 Playlist Created')
                 .setColor('#00FF00' as ColorResolvable)
-                .setTitle('🎵 Playlist Created')
                 .setDescription(`Your playlist **${playlistName}** has been created!`)
                 .setFooter({ text: 'Use /playlist add to add BGMs to your playlist' });
 
@@ -174,7 +173,7 @@ export class PlaylistbgmCommand {
         }
 
         // Check if the playlist exists
-        const playlist = this.userDataService.getPlaylist(interaction.user.id, playlistName);
+        const playlist = this.musicService.getPlaylist(interaction.user.id, playlistName);
 
         if (!playlist) {
             await interaction.followUp(`You don't have a playlist named "${playlistName}". Create one first using /playlist create.`);
@@ -190,18 +189,16 @@ export class PlaylistbgmCommand {
         }
 
         // Add to playlist
-        const success = this.userDataService.addToPlaylist(
+        const success = this.musicService.addToPlaylist(
             interaction.user.id,
             playlistName,
             currentBgm
         );
 
         if (success) {
-            const embed = new EmbedBuilder()
+            const embed = this.musicService.createBaseEmbed('🎵 Added to Playlist')
                 .setColor('#00FF00' as ColorResolvable)
-                .setTitle('🎵 Added to Playlist')
                 .setDescription(`**${currentBgm.mapName}** has been added to your playlist **${playlistName}**!`)
-                .setThumbnail('https://i.imgur.com/nGyPbIj.png')
                 .setFooter({ text: `Your playlist now has ${playlist.songs.length + 1} songs` });
 
             await interaction.followUp({ embeds: [embed] });
@@ -211,7 +208,7 @@ export class PlaylistbgmCommand {
     }
 
     private async handleListPlaylists(interaction: CommandInteraction): Promise<void> {
-        const playlists = this.userDataService.getPlaylists(interaction.user.id);
+        const playlists = this.musicService.getPlaylists(interaction.user.id);
 
         if (playlists.length === 0) {
             await interaction.followUp('You haven\'t created any playlists yet. Use `/playlist create` to create one!');
@@ -219,12 +216,10 @@ export class PlaylistbgmCommand {
         }
 
         // Create embed to display playlists
-        const embed = new EmbedBuilder()
+        const embed = this.musicService.createBaseEmbed('🎵 Your MapleStory BGM Playlists')
             .setColor('#9B59B6' as ColorResolvable)
-            .setTitle('🎵 Your MapleStory BGM Playlists')
             .setDescription(`You have ${playlists.length} playlist(s):`)
-            .setThumbnail('https://i.imgur.com/nGyPbIj.png')
-            .setFooter({ text: 'Use /playlist view <name> to see the songs in a playlist' });
+            .setFooter({ text: 'Use /playlist view <n> to see the songs in a playlist' });
 
         // Add each playlist as a field
         playlists.forEach((playlist, index) => {
@@ -265,7 +260,7 @@ export class PlaylistbgmCommand {
             return;
         }
 
-        const playlist = this.userDataService.getPlaylist(interaction.user.id, playlistName);
+        const playlist = this.musicService.getPlaylist(interaction.user.id, playlistName);
 
         if (!playlist) {
             await interaction.followUp(`You don't have a playlist named "${playlistName}".`);
@@ -277,42 +272,11 @@ export class PlaylistbgmCommand {
             return;
         }
 
-        // Create an embed to display the playlist
-        const embed = new EmbedBuilder()
-            .setColor('#3498DB' as ColorResolvable)
-            .setTitle(`🎵 Playlist: ${playlist.name}`)
-            .setDescription(`This playlist contains ${playlist.songs.length} songs:`)
-            .setThumbnail('https://i.imgur.com/nGyPbIj.png')
-            .setFooter({ text: `Created: ${new Date(playlist.createdAt).toLocaleDateString()} | Updated: ${new Date(playlist.updatedAt).toLocaleDateString()}` });
-
-        // Add each song as a field
-        playlist.songs.forEach((song, index) => {
-            embed.addFields({
-                name: `${index + 1}. ${song.mapName}`,
-                value: `${song.streetName} (ID: ${song.mapId})`,
-                inline: true
-            });
-        });
-
-        // Create buttons for playlist actions
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`play_playlist_${playlistName}`)
-                    .setLabel('Play Playlist')
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji('▶️'),
-                new ButtonBuilder()
-                    .setCustomId(`shuffle_playlist_${playlistName}`)
-                    .setLabel('Shuffle Play')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🔀'),
-                new ButtonBuilder()
-                    .setCustomId(`delete_playlist_${playlistName}`)
-                    .setLabel('Delete Playlist')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('🗑️')
-            );
+        // Use the centralized service to create playlist embed
+        const embed = this.musicService.createPlaylistEmbed(playlist);
+        
+        // Create action row using the centralized service
+        const row = this.musicService.createPlaylistActionRow(playlistName);
 
         await interaction.followUp({
             embeds: [embed],
@@ -321,11 +285,6 @@ export class PlaylistbgmCommand {
     }
 
     private async handlePlayPlaylist(interaction: CommandInteraction): Promise<void> {
-        if (!interaction.guildId) {
-            await interaction.followUp('This command must be used in a server.');
-            return;
-        }
-
         const playlistName = interaction.options.get('name')?.value as string;
 
         if (!playlistName) {
@@ -333,7 +292,7 @@ export class PlaylistbgmCommand {
             return;
         }
 
-        const playlist = this.userDataService.getPlaylist(interaction.user.id, playlistName);
+        const playlist = this.musicService.getPlaylist(interaction.user.id, playlistName);
 
         if (!playlist) {
             await interaction.followUp(`You don't have a playlist named "${playlistName}".`);
@@ -345,88 +304,57 @@ export class PlaylistbgmCommand {
             return;
         }
 
-        // Create a select menu to choose which song to play
-        const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId('select_song_to_play')
-            .setPlaceholder('Select a song to play')
-            .addOptions(
-                playlist.songs.map((song, index) =>
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(`${index + 1}. ${song.mapName}`)
-                        .setDescription(song.streetName)
-                        .setValue(`${song.mapId}`)
-                )
-            );
+        if (!interaction.guildId) {
+            await interaction.followUp('This command must be used in a server.');
+            return;
+        }
 
-        const row = new ActionRowBuilder<StringSelectMenuBuilder>()
-            .addComponents(selectMenu);
+        // Start playing the first song and queue the rest
+        try {
+            // Clear existing queue first
+            VoiceManager.clearQueue(interaction.guildId);
 
-        // Create an embed for song selection
-        const embed = new EmbedBuilder()
-            .setColor('#00FF00' as ColorResolvable)
-            .setTitle(`🎵 Play from Playlist: ${playlist.name}`)
-            .setDescription(`Select a song to play from your playlist:`)
-            .setThumbnail('https://i.imgur.com/nGyPbIj.png')
-            .setFooter({ text: 'Select a song from the dropdown menu below' });
-
-        // Create a secondary row with a shuffle button
-        const buttonRow = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`shuffle_playlist_${playlistName}`)
-                    .setLabel('Play Random Song')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🔀')
-            );
-
-        const response = await interaction.followUp({
-            embeds: [embed],
-            components: [row, buttonRow]
-        });
-
-        // Set up collector for the song selection
-        const collector = response.createMessageComponentCollector({
-            componentType: ComponentType.StringSelect,
-            time: 60000
-        });
-
-        collector.on('collect', async (selectInteraction: StringSelectMenuInteraction) => {
-            // User selected a song to play
-            await selectInteraction.deferUpdate();
-
-            const mapId = Number(selectInteraction.values[0]);
-            const selectedSong = playlist.songs.find(song => song.mapId === mapId);
-
-            if (!selectedSong) {
-                await interaction.followUp('Error: Song not found in playlist.');
-                return;
+            // Add all songs to the queue (except the first one, which we'll play directly)
+            for (let i = 1; i < playlist.songs.length; i++) {
+                const song = playlist.songs[i];
+                await VoiceManager.addToQueue(
+                    interaction.guildId,
+                    song.mapId,
+                    song.mapName,
+                    song.streetName,
+                    song.region,
+                    song.version
+                );
             }
 
-            // Play the selected song
-            await this.playSong(interaction, selectInteraction, selectedSong);
-
-            collector.stop();
-        });
-
-        // Collector end handler
-        collector.on('end', async (collected, reason) => {
-            if (reason === 'time' && collected.size === 0) {
-                const timeoutEmbed = new EmbedBuilder()
-                    .setColor('#808080' as ColorResolvable)
-                    .setTitle('⏰ Selection Timed Out')
-                    .setDescription('You did not select a song in time.')
-                    .setFooter({ text: 'Please run the command again to select a song' });
-
-                try {
-                    await interaction.followUp({
-                        embeds: [timeoutEmbed],
-                        components: []
-                    });
-                } catch (error) {
-                    console.error('Error sending timeout message:', error);
-                }
+            // Create a "starting playback" message
+            await interaction.followUp(`Starting playback of playlist "${playlistName}"...`);
+            
+            // Play the first song 
+            if (interaction.isButton()) {
+                await this.musicService.playSongFromInfo(interaction, playlist.songs[0]);
+            } else {
+                // Create a status embed for playlist playback
+                await interaction.followUp({
+                    content: `Now playing the first song from "${playlistName}"`,
+                    embeds: [
+                        this.musicService.createBaseEmbed(`🎵 Now Playing from: ${playlistName}`)
+                            .setDescription(`**${playlist.songs[0].mapName}** (${playlist.songs[0].streetName})`)
+                    ]
+                });
             }
-        });
+            
+            // Notify about queued songs
+            if (playlist.songs.length > 1) {
+                await interaction.followUp({
+                    content: `Added ${playlist.songs.length - 1} more songs from the playlist to the queue!`,
+                    ephemeral: true
+                });
+            }
+        } catch (error) {
+            console.error('Error playing playlist:', error);
+            await interaction.followUp('There was an error playing the playlist.');
+        }
     }
 
     private async handleDeletePlaylist(interaction: CommandInteraction): Promise<void> {
@@ -437,41 +365,24 @@ export class PlaylistbgmCommand {
             return;
         }
 
-        // Check if the playlist exists
-        const playlist = this.userDataService.getPlaylist(interaction.user.id, playlistName);
+        const playlist = this.musicService.getPlaylist(interaction.user.id, playlistName);
 
         if (!playlist) {
             await interaction.followUp(`You don't have a playlist named "${playlistName}".`);
             return;
         }
 
-        // Create a confirmation button
-        const row = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`confirm_delete_${playlistName}`)
-                    .setLabel('Confirm Delete')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('⚠️'),
-                new ButtonBuilder()
-                    .setCustomId('cancel_delete')
-                    .setLabel('Cancel')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('✖️')
-            );
-
-        // Create a confirmation embed
-        const embed = new EmbedBuilder()
+        // Create confirmation message
+        const embed = this.musicService.createBaseEmbed('🗑️ Delete Playlist?')
             .setColor('#FF0000' as ColorResolvable)
-            .setTitle('⚠️ Confirm Playlist Deletion')
             .setDescription(`Are you sure you want to delete your playlist **${playlistName}**?\nThis action cannot be undone.`)
             .addFields({
-                name: 'Playlist Contents',
-                value: playlist.songs.length === 0 ?
-                    'This playlist is empty.' :
-                    `This playlist contains ${playlist.songs.length} songs.`
-            })
-            .setFooter({ text: 'Click a button below to confirm or cancel' });
+                name: 'Playlist Details',
+                value: `Contains ${playlist.songs.length} songs\nCreated: ${new Date(playlist.createdAt).toLocaleDateString()}`
+            });
+
+        // Create confirmation buttons using the centralized service
+        const row = this.musicService.createDeleteConfirmRow(playlistName);
 
         await interaction.followUp({
             embeds: [embed],
@@ -488,110 +399,44 @@ export class PlaylistbgmCommand {
             return;
         }
 
-        if (!position || position < 1) {
-            await interaction.followUp('You must provide a valid position (1 or higher).');
+        if (!position) {
+            await interaction.followUp('You must provide a position to remove.');
             return;
         }
 
-        // Adjust position to 0-based index
-        const index = position - 1;
-
-        // Get the playlist
-        const playlist = this.userDataService.getPlaylist(interaction.user.id, playlistName);
+        const playlist = this.musicService.getPlaylist(interaction.user.id, playlistName);
 
         if (!playlist) {
             await interaction.followUp(`You don't have a playlist named "${playlistName}".`);
             return;
         }
 
-        // Check if the position is valid
-        if (index >= playlist.songs.length) {
-            await interaction.followUp(`Invalid position. Your playlist only has ${playlist.songs.length} songs.`);
+        if (position < 1 || position > playlist.songs.length) {
+            await interaction.followUp(`Invalid position. The playlist has ${playlist.songs.length} songs.`);
             return;
         }
 
-        // Get the song to be removed for display
-        const songToRemove = playlist.songs[index];
+        // Store the song info before removing it
+        const songToRemove = playlist.songs[position - 1];
 
         // Remove the song
-        const success = this.userDataService.removeFromPlaylist(
+        const success = this.musicService.removeFromPlaylist(
             interaction.user.id,
             playlistName,
-            index
+            position - 1 // Convert to 0-based index
         );
 
         if (success) {
-            const embed = new EmbedBuilder()
-                .setColor('#FF9900' as ColorResolvable)
-                .setTitle('🗑️ Song Removed from Playlist')
+            const embed = this.musicService.createBaseEmbed('🗑️ Song Removed')
+                .setColor('#FF0000' as ColorResolvable)
                 .setDescription(`**${songToRemove.mapName}** has been removed from your playlist **${playlistName}**.`)
                 .setFooter({ text: `Your playlist now has ${playlist.songs.length - 1} songs` });
 
-            await interaction.followUp({ embeds: [embed] });
+            await interaction.followUp({
+                embeds: [embed]
+            });
         } else {
             await interaction.followUp('There was an error removing the song from your playlist.');
-        }
-    }
-
-    // Helper method to actually play a song - updated for new VoiceManager signature
-    private async playSong(
-        commandInteraction: CommandInteraction,
-        menuInteraction: StringSelectMenuInteraction,
-        song: SongInfo
-    ): Promise<void> {
-        try {
-            // Send a loading message
-            const loadingEmbed = new EmbedBuilder()
-                .setColor('#3498DB' as ColorResolvable)
-                .setTitle('🎵 Loading BGM...')
-                .setDescription(`Preparing to play **${song.mapName}** (${song.streetName})`)
-                .setFooter({ text: 'Please wait while I connect to voice and prepare the BGM' });
-
-            await commandInteraction.followUp({
-                embeds: [loadingEmbed]
-            });
-
-            // Get the BGM stream
-            console.log(`[DEBUG] Requesting BGM stream for map ID: ${song.mapId}`);
-            const stream = await this.mapleApi.getMapBgmStream(song.mapId);
-
-            if (!stream) {
-                await commandInteraction.followUp(`Unable to play the BGM for "${song.mapName}". The song might not be available.`);
-                return;
-            }
-
-            // Create a "now playing" embed
-            const mapImageUrl = this.mapleApi.getMapImageUrl(song.mapId);
-            const nowPlayingEmbed = new EmbedBuilder()
-                .setColor('#00FF00' as ColorResolvable)
-                .setTitle(`🎵 Now Playing: ${song.mapName}`)
-                .setDescription(`**Location:** ${song.streetName}\n**Map ID:** ${song.mapId}`)
-                .addFields(
-                    { name: 'Volume', value: `${VoiceManager.getVolume(commandInteraction.guildId!)}%`, inline: true },
-                    { name: 'Controls', value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume', inline: true },
-                    { name: 'Download', value: `Download the BGM [here](https://maplestory.io/api/${song.region}/${song.version}/map/${song.mapId}/bgm)`, inline: true }
-                )
-                .setImage(mapImageUrl)
-                .setTimestamp()
-                .setFooter({ text: 'MapleStory BGM Player | From your playlist' });
-
-            // Play the audio in the voice channel - using the updated method signature
-            await VoiceManager.playAudioInChannel(
-                menuInteraction,
-                stream,
-                `${song.mapName} (${song.streetName})`,
-                song.mapId,
-                commandInteraction as unknown as Interaction
-            );
-
-            // Send the now playing embed
-            await commandInteraction.followUp({
-                embeds: [nowPlayingEmbed]
-            });
-
-        } catch (error) {
-            console.error('Error playing BGM from playlist:', error);
-            await commandInteraction.followUp('There was an error playing the BGM from your playlist.');
         }
     }
 }

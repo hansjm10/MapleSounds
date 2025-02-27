@@ -3,68 +3,103 @@
 import {
     CommandInteraction,
     SlashCommandBuilder,
-    ActionRowBuilder,
     StringSelectMenuBuilder,
+    ActionRowBuilder,
     StringSelectMenuInteraction,
     ComponentType,
     EmbedBuilder,
     ColorResolvable,
+    ButtonBuilder,
+    ButtonStyle,
+    ButtonInteraction,
+    ChatInputCommandInteraction
 } from 'discord.js';
 import { MapleApiService, MapInfo } from '../services/mapleApi';
+import { MusicCollectionService } from '../services/musicCollectionService';
 import { VoiceManager } from '../utils/voiceManager';
+import { SongInfo } from '../services/userDataService';
 
 export class MaplebgmCommand {
     private mapleApi: MapleApiService;
+    private musicService: MusicCollectionService;
 
     constructor() {
         this.mapleApi = new MapleApiService();
+        this.musicService = MusicCollectionService.getInstance();
     }
 
-    // Command definition
     data = new SlashCommandBuilder()
         .setName('maplebgm')
-        .setDescription('Play Maplestory BGM from a specific map')
+        .setDescription('Play or add Maplestory BGM')
         .addStringOption(option =>
             option.setName('search')
                 .setDescription('Search term for Maplestory map')
                 .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName('region')
+                .setDescription('Game region')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'GMS (Global)', value: 'gms' },
+                    { name: 'KMS (Korea)', value: 'kms' },
+                    { name: 'JMS (Japan)', value: 'jms' },
+                    { name: 'CMS (China)', value: 'cms' },
+                    { name: 'TMS (Taiwan)', value: 'tms' },
+                    { name: 'MSEA (Southeast Asia)', value: 'sea' }
+                )
+        )
+        .addStringOption(option =>
+            option.setName('version')
+                .setDescription('Game version (default: 253)')
+                .setRequired(false)
+        )
+        .addStringOption(option =>
+            option.setName('action')
+                .setDescription('What to do with the song')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Play Now', value: 'play' },
+                    { name: 'Add to Queue', value: 'queue' },
+                    { name: 'Save Only', value: 'save' }
+                )
         );
 
-    // Command execution
-    async execute(interaction: CommandInteraction): Promise<void> {
+    async execute(interaction: ChatInputCommandInteraction): Promise<void> {
         await interaction.deferReply();
 
-        console.log(`[DEBUG] Command started - Guild ID: ${interaction.guildId}, Channel ID: ${interaction.channelId}`);
+        const searchTerm = interaction.options.getString('search');
+        const action = interaction.options.getString('action') || 'play'; // Default to play
+        
+        // Get optional region and version parameters
+        const region = interaction.options.getString('region') || 'gms'; // Default to GMS
+        const version = interaction.options.getString('version') || '253'; // Default to 253
 
-        const searchTerm = interaction.options.get('search')?.value as string;
         if (!searchTerm) {
             await interaction.followUp('Please provide a search term for the map.');
             return;
         }
 
+        // Create specific API instance with the provided region and version
+        const apiService = new MapleApiService(region, version);
+
         // Search for maps
-        console.log(`[DEBUG] Searching for maps with term: ${searchTerm}`);
-        const maps = await this.mapleApi.searchMaps(searchTerm);
+        const maps = await apiService.searchMaps(searchTerm);
 
         if (maps.length === 0) {
-            await interaction.followUp(`No maps found for "${searchTerm}". Try a different search term.`);
+            await interaction.followUp(`No maps found for "${searchTerm}" in ${region.toUpperCase()} v${version}. Try a different search term or region.`);
             return;
         }
 
-        console.log(`[DEBUG] Found ${maps.length} maps`);
-
         // Create a search results embed
-        const searchEmbed = new EmbedBuilder()
-            .setColor('#FFA500' as ColorResolvable)
-            .setTitle(`🔍 MapleStory Map Search`)
-            .setDescription(`Found ${maps.length} maps matching **"${searchTerm}"**\nPlease select one to play its BGM:`)
-            .setThumbnail('https://i.imgur.com/nGyPbIj.png') // MapleStory logo
-            .setFooter({ text: 'MapleStory BGM Player | Select a map from the dropdown menu below' });
+        const searchEmbed = this.musicService.createBaseEmbed(`🔍 MapleStory BGM Search - ${action === 'play' ? 'Play Now' : action === 'queue' ? 'Add to Queue' : 'Save Only'}`)
+            .setDescription(`Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\nSelect one to ${action === 'play' ? 'play' : action === 'queue' ? 'add to queue' : 'view details'}:`)
+            .setColor(action === 'play' ? '#00FF00' : action === 'queue' ? '#0099FF' : '#FFA500' as ColorResolvable);
 
         // Create a select menu for maps
         const mapSelectMenu = new StringSelectMenuBuilder()
-            .setCustomId('map_select')
-            .setPlaceholder('Select a map to play its BGM')
+            .setCustomId(`map_select_${action}`)
+            .setPlaceholder(`Select a map to ${action === 'play' ? 'play' : action === 'queue' ? 'add to queue' : 'view'}`)
             .addOptions(
                 maps.slice(0, 25).map(map => ({
                     label: map.name,
@@ -72,7 +107,6 @@ export class MaplebgmCommand {
                     value: map.id.toString(),
                 }))
             );
-
 
         const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(mapSelectMenu);
 
@@ -82,8 +116,6 @@ export class MaplebgmCommand {
             components: [row],
         });
 
-        console.log(`[DEBUG] Response message created - Message ID: ${response.id}`);
-
         // Create a collector for the select menu interaction
         const collector = response.createMessageComponentCollector({
             componentType: ComponentType.StringSelect,
@@ -91,9 +123,6 @@ export class MaplebgmCommand {
         });
 
         collector.on('collect', async (selectInteraction: StringSelectMenuInteraction) => {
-            console.log(`[DEBUG] Select interaction received`);
-
-            // Defer the update to acknowledge the interaction
             await selectInteraction.deferUpdate();
 
             const selectedMapId = parseInt(selectInteraction.values[0]);
@@ -104,92 +133,232 @@ export class MaplebgmCommand {
                 return;
             }
 
-            console.log(`[DEBUG] Map selected: ${selectedMap.name} (ID: ${selectedMapId})`);
-
             try {
-                // Send a loading message
-                const loadingEmbed = new EmbedBuilder()
-                    .setColor('#3498DB' as ColorResolvable)
-                    .setTitle('🎵 Loading BGM...')
-                    .setDescription(`Preparing to play music from **${selectedMap.name}** (${selectedMap.streetName})`)
-                    .setFooter({ text: 'Please wait while I connect to voice and prepare the BGM' });
+                // Convert to SongInfo format
+                const songInfo: SongInfo = {
+                    mapId: selectedMap.id,
+                    mapName: selectedMap.name,
+                    streetName: selectedMap.streetName,
+                    region: selectedMap.region,
+                    version: selectedMap.version
+                };
 
-                const loadingMsg = await interaction.followUp({
-                    embeds: [loadingEmbed],
-                });
-                const mapImageUrl = this.mapleApi.getMapImageUrl(selectedMapId);
-                const nowPlayingEmbed = new EmbedBuilder()
-                    .setColor('#00FF00' as ColorResolvable)
-                    .setTitle(`🎵 Now Playing: ${selectedMap.name}`)
-                    .setDescription(`**Location:** ${selectedMap.streetName}\n**Map ID:** ${selectedMap.id}`)
-                    .addFields(
-                        { name: 'Volume', value: `${VoiceManager.getVolume(interaction.guildId!)}%`, inline: true },
-                        { name: 'Controls', value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume', inline: true },
-                        { name: 'Download', value: `Download the BGM [here](https://maplestory.io/api/${selectedMap.region}/${selectedMap.version}/map/${selectedMapId}/bgm)`, inline: true }
-
-                    )
-                    .setImage(mapImageUrl)
-                    .setTimestamp()
-                    .setFooter({ text: 'MapleStory BGM Player | Enjoy the music!' });
-                console.log(`[DEBUG] Sent loading message as new message`);
-                await interaction.followUp({
-                    embeds: [nowPlayingEmbed],
-                });
-                // Get the BGM stream
-                console.log(`[DEBUG] Requesting BGM stream for map ID: ${selectedMapId}`);
-                const stream = await this.mapleApi.getMapBgmStream(selectedMapId);
-
-                if (!stream) {
-                    await interaction.followUp(`The selected map "${selectedMap.name}" doesn't have a BGM.`);
-                    return;
+                // Perform the selected action
+                switch (action) {
+                    case 'play':
+                        await this.playNow(interaction, songInfo, apiService);
+                        break;
+                    case 'queue':
+                        await this.addToQueue(interaction, songInfo, apiService);
+                        break;
+                    case 'save':
+                        await this.showSaveOptions(interaction, selectedMap, apiService);
+                        break;
                 }
-
-                console.log(`[DEBUG] BGM stream obtained successfully`);
-
-                // THIS IS THE KEY CHANGE: Pass the selectInteraction directly
-                // which contains the guild and voice state information
-                console.log(`[DEBUG] Starting audio playback`);
-                await VoiceManager.playAudioInChannel(
-                    selectInteraction,  // Pass the entire select interaction
-                    stream,
-                    `${selectedMap.name} (${selectedMap.streetName})`,
-                    interaction // For reply messages
-                );
-
-                console.log(`[DEBUG] Audio playback started successfully`);
-
-                // Send confirmation message
-                await interaction.followUp({
-                    content: `Now playing: ${selectedMap.name} (${selectedMap.streetName})`,
-                });
-                console.log(`[DEBUG] Sent confirmation message after playback`);
-
+                
             } catch (error) {
-                console.error('Error playing BGM:', error);
-                await interaction.followUp('There was an error playing the BGM.');
+                console.error('Error handling map selection:', error);
+                await interaction.followUp('There was an error processing your selection.');
             } finally {
                 collector.stop();
-                console.log(`[DEBUG] Collector stopped`);
             }
         });
 
-        // Collector end handler - used if user doesn't select anything
+        // Handle collector end events
         collector.on('end', async (collected, reason) => {
             if (reason === 'time' && collected.size === 0) {
-                const timeoutEmbed = new EmbedBuilder()
-                    .setColor('#808080' as ColorResolvable)
-                    .setTitle('⏰ Selection Timed Out')
-                    .setDescription('You did not select a map in time.')
-                    .setFooter({ text: 'Please run the command again to search for maps' });
-
                 try {
-                    await interaction.followUp({
-                        embeds: [timeoutEmbed]
-                    });
+                    const timeoutEmbed = this.musicService.createBaseEmbed('⏰ Selection Timed Out')
+                        .setDescription('You did not select a map in time.')
+                        .setColor('#808080' as ColorResolvable);
+                    
+                    await interaction.followUp({ embeds: [timeoutEmbed] });
                 } catch (error) {
                     console.error('Error sending timeout message:', error);
                 }
             }
+        });
+    }
+
+    // Play the song now in voice channel
+    private async playNow(
+        interaction: ChatInputCommandInteraction, 
+        songInfo: SongInfo,
+        apiService: MapleApiService
+    ): Promise<void> {
+        try {
+            if (!interaction.guildId) {
+                await interaction.followUp('This command must be used in a server.');
+                return;
+            }
+
+            // Get the BGM stream
+            const stream = await apiService.getMapBgmStream(songInfo.mapId);
+
+            if (!stream) {
+                await interaction.followUp(`Unable to play the BGM for "${songInfo.mapName}". The song might not be available.`);
+                return;
+            }
+
+            // Play BGM in voice channel
+            const success = await VoiceManager.playAudioInChannel(
+                interaction,
+                stream,
+                `${songInfo.mapName} (${songInfo.streetName})`,
+                songInfo.mapId,
+                interaction
+            );
+
+            if (success) {
+                // Create a "now playing" embed
+                const mapImageUrl = apiService.getMapImageUrl(songInfo.mapId);
+                const nowPlayingEmbed = new EmbedBuilder()
+                    .setColor('#00FF00' as ColorResolvable)
+                    .setTitle(`🎵 Now Playing: ${songInfo.mapName}`)
+                    .setDescription(`**Location:** ${songInfo.streetName}\n**Map ID:** ${songInfo.mapId}`)
+                    .addFields(
+                        { name: 'Region/Version', value: `${songInfo.region.toUpperCase()} v${songInfo.version}`, inline: true },
+                        { name: 'Volume', value: `${VoiceManager.getVolume(interaction.guildId)}%`, inline: true },
+                        { name: 'Controls', value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume', inline: true }
+                    )
+                    .setImage(mapImageUrl)
+                    .setTimestamp();
+
+                // Add action buttons
+                const actionRow = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`favorite_map_${songInfo.mapId}`)
+                            .setLabel('Add to Favorites')
+                            .setStyle(ButtonStyle.Primary)
+                            .setEmoji('⭐'),
+                        new ButtonBuilder()
+                            .setCustomId(`add_to_playlist_${songInfo.mapId}`)
+                            .setLabel('Add to Playlist')
+                            .setStyle(ButtonStyle.Success)
+                            .setEmoji('📋')
+                    );
+
+                await interaction.followUp({
+                    embeds: [nowPlayingEmbed],
+                    components: [actionRow]
+                });
+            } else {
+                await interaction.followUp('There was an error playing the BGM. Make sure you\'re in a voice channel.');
+            }
+        } catch (error) {
+            console.error('Error playing BGM:', error);
+            await interaction.followUp('There was an error playing the BGM.');
+        }
+    }
+
+    // Add the song to queue
+    private async addToQueue(
+        interaction: ChatInputCommandInteraction, 
+        songInfo: SongInfo,
+        apiService: MapleApiService
+    ): Promise<void> {
+        try {
+            if (!interaction.guildId) {
+                await interaction.followUp('This command must be used in a server.');
+                return;
+            }
+
+            // Add to queue
+            const success = await VoiceManager.addToQueue(
+                interaction.guildId,
+                songInfo.mapId,
+                songInfo.mapName,
+                songInfo.streetName,
+                songInfo.region,
+                songInfo.version
+            );
+
+            if (success) {
+                // Get queue position
+                const queuePosition = VoiceManager.getQueuePosition(interaction.guildId, songInfo.mapId);
+                const queueStatus = VoiceManager.isPlaying(interaction.guildId) ? 'in queue' : 'and will play now';
+                
+                const queueEmbed = this.musicService.createBaseEmbed('🎵 Added to Queue')
+                    .setColor('#0099FF' as ColorResolvable)
+                    .setDescription(`**${songInfo.mapName}** (${songInfo.region.toUpperCase()} v${songInfo.version}) has been added to the queue ${queueStatus}${queuePosition ? ` at position #${queuePosition}` : ''}!`)
+                    .setThumbnail(apiService.getMapImageUrl(songInfo.mapId, true));
+
+                const actionRow = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('queue_show')
+                            .setLabel('Show Queue')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji('🔍'),
+                        new ButtonBuilder()
+                            .setCustomId(`favorite_map_${songInfo.mapId}`)
+                            .setLabel('Add to Favorites')
+                            .setStyle(ButtonStyle.Primary)
+                            .setEmoji('⭐')
+                    );
+
+                await interaction.followUp({
+                    embeds: [queueEmbed],
+                    components: [actionRow]
+                });
+            } else {
+                await interaction.followUp('Failed to add the song to the queue. Make sure you\'re in a voice channel.');
+            }
+        } catch (error) {
+            console.error('Error adding to queue:', error);
+            await interaction.followUp('There was an error adding the song to the queue.');
+        }
+    }
+
+    // Show save options for the selected map
+    private async showSaveOptions(
+        interaction: ChatInputCommandInteraction, 
+        map: MapInfo,
+        apiService: MapleApiService
+    ): Promise<void> {
+        // Get map details
+        const mapImageUrl = apiService.getMapImageUrl(map.id);
+        
+        // Create map details embed
+        const detailsEmbed = this.musicService.createBaseEmbed(`🗺️ ${map.name}`)
+            .setColor('#FFA500' as ColorResolvable)
+            .setDescription(`**Location:** ${map.streetName}\n**Map ID:** ${map.id}`)
+            .addFields(
+                { name: 'Region', value: map.region.toUpperCase(), inline: true },
+                { name: 'Version', value: map.version, inline: true },
+                { name: 'BGM Link', value: `[Download](https://maplestory.io/api/${map.region}/${map.version}/map/${map.id}/bgm)`, inline: true }
+            )
+            .setImage(mapImageUrl);
+
+        // Create action buttons
+        const actionRow = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`play_selected_${map.id}`)
+                    .setLabel('Play Now')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('▶️'),
+                new ButtonBuilder()
+                    .setCustomId(`queue_selected_${map.id}`)
+                    .setLabel('Add to Queue')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('📋'),
+                new ButtonBuilder()
+                    .setCustomId(`favorite_map_${map.id}`)
+                    .setLabel('Add to Favorites')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('⭐'),
+                new ButtonBuilder()
+                    .setCustomId(`add_to_playlist_${map.id}`)
+                    .setLabel('Add to Playlist')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('📋')
+            );
+
+        await interaction.followUp({
+            embeds: [detailsEmbed],
+            components: [actionRow]
         });
     }
 }

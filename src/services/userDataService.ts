@@ -144,7 +144,12 @@ export class UserDataService {
         return this.data.get(userId)!;
     }
 
-    // Favorites methods
+    /**
+     * Adds a song to a user's favorites
+     * @param userId - The Discord ID of the user
+     * @param song - The song information to add to favorites
+     * @returns true if the song was added successfully, false otherwise
+     */
     addToFavorites(userId: string, song: SongInfo): boolean {
         try {
             console.log(`[DEBUG] Adding favorite for user ${userId}. Current data path: ${this.dataPath}`);
@@ -190,6 +195,12 @@ export class UserDataService {
         }
     }
 
+    /**
+     * Removes a song from a user's favorites
+     * @param userId - The Discord ID of the user
+     * @param mapId - The ID of the map/song to remove
+     * @returns true if the song was removed successfully, false otherwise
+     */
     removeFromFavorites(userId: string, mapId: number): boolean {
         try {
             const userData = this.getUserData(userId);
@@ -207,7 +218,11 @@ export class UserDataService {
         }
     }
 
-
+    /**
+     * Retrieves a user's favorite songs
+     * @param userId - The Discord ID of the user
+     * @returns An array of the user's favorite songs
+     */
     getFavorites(userId: string): SongInfo[] {
         try {
             console.log(`[DEBUG] Getting favorites for user ${userId}. Current data path: ${this.dataPath}`);
@@ -229,8 +244,12 @@ export class UserDataService {
         }
     }
 
-
-    // Playlist methods
+    /**
+     * Creates a new playlist for a user
+     * @param userId - The Discord ID of the user
+     * @param playlistName - The name for the new playlist
+     * @returns true if the playlist was created successfully, false otherwise
+     */
     createPlaylist(userId: string, playlistName: string): boolean {
         try {
             const userData = this.getUserData(userId);
@@ -254,6 +273,14 @@ export class UserDataService {
             return false;
         }
     }
+
+    /**
+     * Adds a song to a user's playlist
+     * @param userId - The Discord ID of the user
+     * @param playlistName - The name of the playlist to add to
+     * @param song - The song information to add
+     * @returns true if the song was added successfully, false otherwise
+     */
     addToPlaylist(userId: string, playlistName: string, song: SongInfo): boolean {
         const userData = this.getUserData(userId);
         const playlist = userData.playlists.find(
@@ -275,6 +302,13 @@ export class UserDataService {
         return true;
     }
 
+    /**
+     * Removes a song from a user's playlist
+     * @param userId - The Discord ID of the user
+     * @param playlistName - The name of the playlist
+     * @param index - The index of the song to remove
+     * @returns true if the song was removed successfully, false otherwise
+     */
     removeFromPlaylist(userId: string, playlistName: string, index: number): boolean {
         const userData = this.getUserData(userId);
         const playlist = userData.playlists.find(
@@ -291,6 +325,12 @@ export class UserDataService {
         return true;
     }
 
+    /**
+     * Gets a specific playlist for a user
+     * @param userId - The Discord ID of the user
+     * @param playlistName - The name of the playlist to retrieve
+     * @returns The playlist object or null if not found
+     */
     getPlaylist(userId: string, playlistName: string): Playlist | null {
         const userData = this.getUserData(userId);
         return userData.playlists.find(
@@ -298,10 +338,21 @@ export class UserDataService {
         ) || null;
     }
 
+    /**
+     * Gets all playlists for a user
+     * @param userId - The Discord ID of the user
+     * @returns An array of the user's playlists
+     */
     getPlaylists(userId: string): Playlist[] {
         return this.getUserData(userId).playlists;
     }
 
+    /**
+     * Deletes a playlist for a user
+     * @param userId - The Discord ID of the user
+     * @param playlistName - The name of the playlist to delete
+     * @returns true if the playlist was deleted successfully, false otherwise
+     */
     deletePlaylist(userId: string, playlistName: string): boolean {
         const userData = this.getUserData(userId);
         const initialLength = userData.playlists.length;

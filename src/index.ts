@@ -4,9 +4,11 @@ import * as dotenv from 'dotenv';
 import { MaplebgmCommand } from './commands/maplebgm';
 import { StopbgmCommand } from './commands/stopbgm';
 import { VolumebgmCommand } from './commands/volumebgm';
-import { FavoritebgmCommand } from './commands/favoritebgm';
-import { FavoritesbgmCommand } from './commands/favoritesbgm';
-import { PlaylistbgmCommand } from './commands/playlistbgm';
+import { FavoritebgmCommand } from "./commands/favoritebgm";
+import { FavoritesbgmCommand } from "./commands/favoritesbgm";
+import { PlaylistbgmCommand } from "./commands/playlistbgm";
+import { FindbgmCommand } from "./commands/findbgm";
+import { QueuebgmCommand } from "./commands/queuebgm";
 import { InteractionHandler } from './handlers/interactionHandler';
 
 dotenv.config({ path: '../.env' });
@@ -28,6 +30,8 @@ commands.set('volumebgm', new VolumebgmCommand());
 commands.set('favoritebgm', new FavoritebgmCommand());
 commands.set('favorites', new FavoritesbgmCommand());
 commands.set('playlist', new PlaylistbgmCommand());
+commands.set('findbgm', new FindbgmCommand());
+commands.set('queuebgm', new QueuebgmCommand());
 
 // Create interaction handler
 const interactionHandler = new InteractionHandler(commands);
