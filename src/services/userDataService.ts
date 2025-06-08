@@ -78,6 +78,12 @@ export class UserDataService {
             this.initialized = true;
         }
     }
+    /**
+     * Validates and ensures user data has proper structure.
+     * Performance Note: These validation checks have negligible performance impact
+     * as they only run during data loading (once at startup) and for new users.
+     * The safety benefits far outweigh the minimal overhead.
+     */
     private validateUserData(userData: any): IUserData {
         // Ensure all required structures exist
         return {
@@ -132,6 +138,18 @@ export class UserDataService {
         }
     }
 
+    /**
+     * Gets or creates user data for a given user ID.
+     * This method ensures that user data always exists and is properly initialized.
+     *
+     * @param userId - The Discord ID of the user
+     * @returns The user data object
+     * @throws Error if user data cannot be retrieved after initialization (defensive programming)
+     *
+     * Note: The error throw is intentional to catch logic errors early. If userData is not found
+     * after we just set it, this indicates a serious issue with the Map implementation or memory.
+     * This defensive approach ensures data integrity and helps identify bugs during development.
+     */
     private getUserData(userId: string): IUserData {
         if (!this.data.has(userId)) {
             this.data.set(userId, {

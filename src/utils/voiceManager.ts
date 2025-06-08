@@ -294,7 +294,7 @@ export class VoiceManager {
                                     if (replyInteraction.isRepliable()) {
                                         await replyInteraction.followUp({
                                             content: 'Now playing next song: ' +
-                                                     `${nextItem.song.mapName} (${nextItem.song.streetName})`,
+                                                `${nextItem.song.mapName} (${nextItem.song.streetName})`,
                                         });
                                     }
                                     return;
