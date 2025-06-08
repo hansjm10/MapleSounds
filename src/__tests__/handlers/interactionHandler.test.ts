@@ -1,9 +1,5 @@
 import { InteractionHandler } from '../../handlers/interactionHandler';
-import { Collection, Interaction } from 'discord.js';
-import { VoiceManager } from '../../utils/voiceManager';
-import { UserDataService } from '../../services/userDataService';
-import { MapleApiService } from '../../services/mapleApi';
-import { Readable } from 'stream';
+import { Collection } from 'discord.js';
 
 // Mock dependencies
 jest.mock('../../utils/voiceManager');
@@ -13,7 +9,7 @@ jest.mock('../../services/mapleApi');
 // Skipping this test suite for now since it requires more complex mocking
 // of Discord.js types which is beyond the scope of this exercise
 describe.skip('InteractionHandler', () => {
-    let interactionHandler: InteractionHandler;
+    let _interactionHandler: InteractionHandler;
     let mockCommands: Collection<string, any>;
     let mockCommand: { execute: jest.Mock };
 
@@ -31,7 +27,7 @@ describe.skip('InteractionHandler', () => {
         mockCommands.set('testcommand', mockCommand);
 
         // Create interaction handler with mock commands
-        interactionHandler = new InteractionHandler(mockCommands);
+        _interactionHandler = new InteractionHandler(mockCommands);
     });
 
     describe('Command Interactions', () => {

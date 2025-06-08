@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import type { SongInfo } from '../../services/userDataService';
-import { UserDataService, Playlist } from '../../services/userDataService';
+import type { ISongInfo } from '../../services/userDataService';
+import { UserDataService } from '../../services/userDataService';
 
 jest.mock('fs');
 const mockedFs = fs as jest.Mocked<typeof fs>;
@@ -9,9 +9,9 @@ const mockedFs = fs as jest.Mocked<typeof fs>;
 describe('UserDataService', () => {
   let userDataService: UserDataService;
   const testDataDir = './test-data';
-  const testDataPath = path.join(process.cwd(), testDataDir, 'userdata.json');
+  const _testDataPath = path.join(process.cwd(), testDataDir, 'userdata.json');
 
-  const mockSong: SongInfo = {
+  const mockSong: ISongInfo = {
     mapId: 100000000,
     mapName: 'Henesys',
     streetName: 'Market',

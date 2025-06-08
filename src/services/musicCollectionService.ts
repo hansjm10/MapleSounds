@@ -1,6 +1,6 @@
 // src/services/musicCollectionService.ts
 
-import type { SongInfo, Playlist } from './userDataService';
+import type { ISongInfo, IPlaylist } from './userDataService';
 import { UserDataService } from './userDataService';
 import { VoiceManager } from '../utils/voiceManager';
 import { MapleApiService } from './mapleApi';
@@ -8,7 +8,6 @@ import type {
     ButtonInteraction,
     ColorResolvable } from 'discord.js';
 import {
-    Interaction,
     EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
@@ -46,7 +45,7 @@ export class MusicCollectionService {
     /**
      * Add a song to a user's favorites
      */
-    public addToFavorites(userId: string, song: SongInfo): boolean {
+    public addToFavorites(userId: string, song: ISongInfo): boolean {
         return this.userDataService.addToFavorites(userId, song);
     }
 
@@ -60,14 +59,14 @@ export class MusicCollectionService {
     /**
      * Get all favorites for a user
      */
-    public getFavorites(userId: string): SongInfo[] {
+    public getFavorites(userId: string): ISongInfo[] {
         return this.userDataService.getFavorites(userId);
     }
 
     /**
      * Get a random favorite song for a user
      */
-    public getRandomFavorite(userId: string): SongInfo | null {
+    public getRandomFavorite(userId: string): ISongInfo | null {
         const favorites = this.getFavorites(userId);
         if (favorites.length === 0) {
             return null;
@@ -122,7 +121,7 @@ export class MusicCollectionService {
     /**
      * Add a song to a user's playlist
      */
-    public addToPlaylist(userId: string, playlistName: string, song: SongInfo): boolean {
+    public addToPlaylist(userId: string, playlistName: string, song: ISongInfo): boolean {
         return this.userDataService.addToPlaylist(userId, playlistName, song);
     }
 
@@ -136,14 +135,14 @@ export class MusicCollectionService {
     /**
      * Get a specific playlist for a user
      */
-    public getPlaylist(userId: string, playlistName: string): Playlist | null {
+    public getPlaylist(userId: string, playlistName: string): IPlaylist | null {
         return this.userDataService.getPlaylist(userId, playlistName);
     }
 
     /**
      * Get all playlists for a user
      */
-    public getPlaylists(userId: string): Playlist[] {
+    public getPlaylists(userId: string): IPlaylist[] {
         return this.userDataService.getPlaylists(userId);
     }
 
@@ -157,13 +156,14 @@ export class MusicCollectionService {
     /**
      * Create an embed for a playlist
      */
-    public createPlaylistEmbed(playlist: Playlist): EmbedBuilder {
+    public createPlaylistEmbed(playlist: IPlaylist): EmbedBuilder {
         const embed = new EmbedBuilder()
             .setColor('#9B59B6' as ColorResolvable)
             .setTitle(`🎵 Playlist: ${playlist.name}`)
             .setDescription(`${playlist.songs.length} songs in this playlist`)
             .setFooter({
-                text: `Created: ${new Date(playlist.createdAt).toLocaleDateString()} • Updated: ${new Date(playlist.updatedAt).toLocaleDateString()}`,
+                text: `Created: ${new Date(playlist.createdAt).toLocaleDateString()} • ` +
+                      `Updated: ${new Date(playlist.updatedAt).toLocaleDateString()}`,
             });
 
         // Add songs as fields
@@ -232,7 +232,7 @@ export class MusicCollectionService {
      */
     public async playSongFromInfo(
         interaction: ButtonInteraction,
-        song: SongInfo,
+        song: ISongInfo,
         alreadyDeferred: boolean = false,
     ): Promise<void> {
         try {
@@ -262,7 +262,9 @@ export class MusicCollectionService {
             const stream = await this.mapleApi.getMapBgmStream(song.mapId);
 
             if (!stream) {
-                await interaction.followUp(`Unable to play the BGM for "${song.mapName}". The song might not be available.`);
+                await interaction.followUp(
+                    `Unable to play the BGM for "${song.mapName}". The song might not be available.`,
+                );
                 return;
             }
 
@@ -281,7 +283,7 @@ export class MusicCollectionService {
     private async playAudio(
         interaction: ButtonInteraction,
         stream: Readable,
-        song: SongInfo,
+        song: ISongInfo,
     ): Promise<void> {
         try {
             // Create a "now playing" embed
@@ -291,9 +293,18 @@ export class MusicCollectionService {
                 .setTitle(`🎵 Now Playing: ${song.mapName}`)
                 .setDescription(`**Location:** ${song.streetName}\n**Map ID:** ${song.mapId}`)
                 .addFields(
-                    { name: 'Volume', value: `${VoiceManager.getVolume(interaction.guildId!)}%`, inline: true },
-                    { name: 'Controls', value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume', inline: true },
-                    { name: 'Download', value: `Download the BGM [here](https://maplestory.io/api/${song.region}/${song.version}/map/${song.mapId}/bgm)`, inline: true },
+                    { name: 'Volume', value: `${VoiceManager.getVolume(interaction.guildId ?? '')}%`, inline: true },
+                    {
+                        name: 'Controls',
+                        value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume',
+                        inline: true,
+                    },
+                    {
+                        name: 'Download',
+                        value: 'Download the BGM ' +
+                               `[here](https://maplestory.io/api/${song.region}/${song.version}/map/${song.mapId}/bgm)`,
+                        inline: true,
+                    },
                 )
                 .setImage(mapImageUrl)
                 .setTimestamp()

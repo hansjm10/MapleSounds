@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-export interface SongInfo {
+export interface ISongInfo {
     mapId: number;
     mapName: string;
     streetName: string;
@@ -9,22 +9,22 @@ export interface SongInfo {
     version: string;
 }
 
-export interface Playlist {
+export interface IPlaylist {
     name: string;
-    songs: SongInfo[];
+    songs: ISongInfo[];
     createdAt: string; // Store as ISO string instead of Date object
     updatedAt: string; // Store as ISO string instead of Date object
 }
 
-export interface UserData {
+export interface IUserData {
     userId: string;
-    favorites: SongInfo[];
-    playlists: Playlist[];
+    favorites: ISongInfo[];
+    playlists: IPlaylist[];
 }
 
 export class UserDataService {
     private dataPath: string;
-    private data: Map<string, UserData> = new Map();
+    private data: Map<string, IUserData> = new Map();
     private initialized: boolean = false;
     private saveQueued: boolean = false;
 
@@ -37,7 +37,7 @@ export class UserDataService {
         ];
 
         // Find the first path that exists, or use the default
-        this.dataPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+        this.dataPath = possiblePaths.find(p => fs.existsSync(p)) ?? possiblePaths[0];
         console.log('Using data path:', this.dataPath);
         this.loadData();
     }
@@ -56,7 +56,7 @@ export class UserDataService {
                 const jsonData = JSON.parse(fileData);
                 for (const [userId, userData] of Object.entries(jsonData)) {
                     // Ensure proper structure
-                    const validatedData = this.validateUserData(userData as UserData);
+                    const validatedData = this.validateUserData(userData as IUserData);
                     this.data.set(userId, validatedData);
                 }
                 console.log(`Loaded user data for ${this.data.size} users`);
@@ -78,16 +78,16 @@ export class UserDataService {
             this.initialized = true;
         }
     }
-    private validateUserData(userData: any): UserData {
+    private validateUserData(userData: any): IUserData {
         // Ensure all required structures exist
         return {
-            userId: userData.userId || '',
+            userId: userData.userId ?? '',
             favorites: Array.isArray(userData.favorites) ? userData.favorites : [],
             playlists: Array.isArray(userData.playlists) ? userData.playlists.map((p: any) => ({
-                name: p.name || 'Unnamed Playlist',
+                name: p.name ?? 'Unnamed Playlist',
                 songs: Array.isArray(p.songs) ? p.songs : [],
-                createdAt: p.createdAt || new Date().toISOString(),
-                updatedAt: p.updatedAt || new Date().toISOString(),
+                createdAt: p.createdAt ?? new Date().toISOString(),
+                updatedAt: p.updatedAt ?? new Date().toISOString(),
             })) : [],
         };
     }
@@ -100,7 +100,7 @@ export class UserDataService {
         }
 
         try {
-            const jsonData: Record<string, UserData> = {};
+            const jsonData: Record<string, IUserData> = {};
             for (const [userId, userData] of this.data.entries()) {
                 jsonData[userId] = userData;
             }
@@ -132,7 +132,7 @@ export class UserDataService {
         }
     }
 
-    private getUserData(userId: string): UserData {
+    private getUserData(userId: string): IUserData {
         if (!this.data.has(userId)) {
             this.data.set(userId, {
                 userId,
@@ -141,7 +141,11 @@ export class UserDataService {
             });
             this.saveData();
         }
-        return this.data.get(userId)!;
+        const userData = this.data.get(userId);
+        if (!userData) {
+            throw new Error(`User data not found after initialization for user ${userId}`);
+        }
+        return userData;
     }
 
     /**
@@ -150,7 +154,7 @@ export class UserDataService {
      * @param song - The song information to add to favorites
      * @returns true if the song was added successfully, false otherwise
      */
-    addToFavorites(userId: string, song: SongInfo): boolean {
+    addToFavorites(userId: string, song: ISongInfo): boolean {
         try {
             console.log(`[DEBUG] Adding favorite for user ${userId}. Current data path: ${this.dataPath}`);
             console.log('[DEBUG] Song to add:', song);
@@ -165,7 +169,7 @@ export class UserDataService {
             };
 
             // Check if already favorited
-            if (userData.favorites.some(fav => fav.mapId === normalizedSong.mapId)) {
+            if (userData.favorites.some((fav: ISongInfo) => fav.mapId === normalizedSong.mapId)) {
                 console.log('[DEBUG] Song already in favorites');
                 return false;
             }
@@ -206,7 +210,7 @@ export class UserDataService {
             const userData = this.getUserData(userId);
             const initialLength = userData.favorites.length;
 
-            userData.favorites = userData.favorites.filter(song => song.mapId !== mapId);
+            userData.favorites = userData.favorites.filter((song: ISongInfo) => song.mapId !== mapId);
 
             if (userData.favorites.length !== initialLength) {
                 return this.saveData();
@@ -223,7 +227,7 @@ export class UserDataService {
      * @param userId - The Discord ID of the user
      * @returns An array of the user's favorite songs
      */
-    getFavorites(userId: string): SongInfo[] {
+    getFavorites(userId: string): ISongInfo[] {
         try {
             console.log(`[DEBUG] Getting favorites for user ${userId}. Current data path: ${this.dataPath}`);
 
@@ -255,7 +259,7 @@ export class UserDataService {
             const userData = this.getUserData(userId);
 
             // Check if playlist name already exists
-            if (userData.playlists.some(p => p.name.toLowerCase() === playlistName.toLowerCase())) {
+            if (userData.playlists.some((p: IPlaylist) => p.name.toLowerCase() === playlistName.toLowerCase())) {
                 return false;
             }
 
@@ -281,10 +285,10 @@ export class UserDataService {
      * @param song - The song information to add
      * @returns true if the song was added successfully, false otherwise
      */
-    addToPlaylist(userId: string, playlistName: string, song: SongInfo): boolean {
+    addToPlaylist(userId: string, playlistName: string, song: ISongInfo): boolean {
         const userData = this.getUserData(userId);
         const playlist = userData.playlists.find(
-            p => p.name.toLowerCase() === playlistName.toLowerCase(),
+            (p: IPlaylist) => p.name.toLowerCase() === playlistName.toLowerCase(),
         );
 
         if (!playlist) {
@@ -292,7 +296,7 @@ export class UserDataService {
         }
 
         // Check if song already in playlist
-        if (playlist.songs.some(s => s.mapId === song.mapId)) {
+        if (playlist.songs.some((s: ISongInfo) => s.mapId === song.mapId)) {
             return false;
         }
 
@@ -312,7 +316,7 @@ export class UserDataService {
     removeFromPlaylist(userId: string, playlistName: string, index: number): boolean {
         const userData = this.getUserData(userId);
         const playlist = userData.playlists.find(
-            p => p.name.toLowerCase() === playlistName.toLowerCase(),
+            (p: IPlaylist) => p.name.toLowerCase() === playlistName.toLowerCase(),
         );
 
         if (!playlist || index < 0 || index >= playlist.songs.length) {
@@ -331,11 +335,11 @@ export class UserDataService {
      * @param playlistName - The name of the playlist to retrieve
      * @returns The playlist object or null if not found
      */
-    getPlaylist(userId: string, playlistName: string): Playlist | null {
+    getPlaylist(userId: string, playlistName: string): IPlaylist | null {
         const userData = this.getUserData(userId);
         return userData.playlists.find(
-            p => p.name.toLowerCase() === playlistName.toLowerCase(),
-        ) || null;
+            (p: IPlaylist) => p.name.toLowerCase() === playlistName.toLowerCase(),
+        ) ?? null;
     }
 
     /**
@@ -343,7 +347,7 @@ export class UserDataService {
      * @param userId - The Discord ID of the user
      * @returns An array of the user's playlists
      */
-    getPlaylists(userId: string): Playlist[] {
+    getPlaylists(userId: string): IPlaylist[] {
         return this.getUserData(userId).playlists;
     }
 
@@ -358,7 +362,7 @@ export class UserDataService {
         const initialLength = userData.playlists.length;
 
         userData.playlists = userData.playlists.filter(
-            p => p.name.toLowerCase() !== playlistName.toLowerCase(),
+            (p: IPlaylist) => p.name.toLowerCase() !== playlistName.toLowerCase(),
         );
 
         if (userData.playlists.length !== initialLength) {

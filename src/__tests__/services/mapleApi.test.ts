@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { MapInfo } from '../../services/mapleApi';
+import type { IMapInfo } from '../../services/mapleApi';
 import { MapleApiService } from '../../services/mapleApi';
 
 jest.mock('axios');
@@ -15,7 +15,7 @@ describe('MapleApiService', () => {
 
   describe('searchMaps', () => {
     it('should return mapped results when search is successful', async () => {
-      const mockMapData: Array<Partial<MapInfo>> = [
+      const mockMapData: Array<Partial<IMapInfo>> = [
         { name: 'Henesys', streetName: 'Market', id: 100000000 },
         { name: 'Henesys Hunting Ground', streetName: 'Hunting Ground', id: 100010000 },
       ];

@@ -2,8 +2,6 @@ import { FindbgmCommand } from '../../commands/findbgm';
 import { MapleApiService } from '../../services/mapleApi';
 import { MusicCollectionService } from '../../services/musicCollectionService';
 import type { ChatInputCommandInteraction, ButtonInteraction } from 'discord.js';
-import { StringSelectMenuInteraction } from 'discord.js';
-import { Readable } from 'stream';
 
 // Mock dependencies
 jest.mock('../../services/mapleApi');

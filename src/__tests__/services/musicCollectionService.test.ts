@@ -1,8 +1,6 @@
 import { MusicCollectionService } from '../../services/musicCollectionService';
-import type { UserDataService, SongInfo } from '../../services/userDataService';
-import { VoiceManager } from '../../utils/voiceManager';
-import { Readable } from 'stream';
-import { EmbedBuilder, ButtonInteraction } from 'discord.js';
+import type { UserDataService, ISongInfo } from '../../services/userDataService';
+import { EmbedBuilder } from 'discord.js';
 
 // Mock dependencies
 jest.mock('../../services/userDataService');
@@ -14,7 +12,7 @@ describe('MusicCollectionService', () => {
     let mockUserDataService: jest.Mocked<UserDataService>;
 
     // Mock song data
-    const mockSong: SongInfo = {
+    const mockSong: ISongInfo = {
         mapId: 100000000,
         mapName: 'Henesys',
         streetName: 'Market',

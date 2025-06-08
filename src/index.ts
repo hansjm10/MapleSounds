@@ -23,7 +23,12 @@ const client = new Client({
 });
 
 // Command collection
-const commands: Collection<string, any> = new Collection();
+interface ICommand {
+    data: any;
+    execute: (interaction: any) => Promise<void>;
+}
+
+const commands: Collection<string, ICommand> = new Collection();
 commands.set('maplebgm', new MaplebgmCommand());
 commands.set('stopbgm', new StopbgmCommand());
 commands.set('volumebgm', new VolumebgmCommand());
@@ -47,4 +52,4 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 // Login to Discord with your client's token
-client.login(process.env.DISCORD_TOKEN);
+void client.login(process.env.DISCORD_TOKEN);

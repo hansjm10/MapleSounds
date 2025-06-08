@@ -5,7 +5,6 @@ import type {
     ColorResolvable } from 'discord.js';
 import {
     SlashCommandBuilder,
-    EmbedBuilder,
 } from 'discord.js';
 import { MusicCollectionService } from '../services/musicCollectionService';
 import { VoiceManager } from '../utils/voiceManager';
@@ -46,7 +45,9 @@ export class FavoritebgmCommand {
         if (success) {
             const embed = this.musicService.createBaseEmbed('⭐ BGM Added to Favorites')
                 .setColor('#FFD700' as ColorResolvable)
-                .setDescription(`**${currentBgm.mapName}** (${currentBgm.streetName}) has been added to your favorites!`)
+                .setDescription(
+                    `**${currentBgm.mapName}** (${currentBgm.streetName}) has been added to your favorites!`,
+                )
                 .setFooter({ text: 'Use /favorites to see your favorite BGMs' });
 
             await interaction.followUp({ embeds: [embed] });

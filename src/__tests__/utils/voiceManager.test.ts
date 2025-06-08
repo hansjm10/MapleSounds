@@ -1,7 +1,5 @@
 import { VoiceManager } from '../../utils/voiceManager';
-import * as discordVoice from '@discordjs/voice';
-import { Readable } from 'stream';
-import type { SongInfo } from '../../services/userDataService';
+import type { ISongInfo } from '../../services/userDataService';
 
 // Mock all Discord voice functionality
 jest.mock('@discordjs/voice');
@@ -15,7 +13,7 @@ describe('VoiceManager', () => {
   // Mock data setup
   const mockGuildId = 'guild-123';
   const mockUserId = 'user-456';
-  const mockSong: SongInfo = {
+  const mockSong: ISongInfo = {
     mapId: 100000000,
     mapName: 'Henesys',
     streetName: 'Market',
@@ -37,7 +35,7 @@ describe('VoiceManager', () => {
     // Mock queue-related methods to avoid audio playback issues
     VoiceManager.getQueue = jest.fn().mockImplementation((guildId) => {
       const queues = getPrivateProperty('queues');
-      return queues.get(guildId) || [];
+      return queues.get(guildId) ?? [];
     });
 
     // Override the queues map to manually add items without triggering playback
