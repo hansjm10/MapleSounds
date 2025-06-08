@@ -1,19 +1,20 @@
 // src/handlers/interactionHandler.ts
-import {
+import type {
     Interaction,
     CommandInteraction,
     ButtonInteraction,
     StringSelectMenuInteraction,
     Collection,
+    ColorResolvable } from 'discord.js';
+import {
     EmbedBuilder,
-    ColorResolvable,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
     StringSelectMenuBuilder,
-    ComponentType
+    ComponentType,
 } from 'discord.js';
-import { SongInfo } from '../services/userDataService';
+import type { SongInfo } from '../services/userDataService';
 import { MusicCollectionService } from '../services/musicCollectionService';
 import { MapleApiService } from '../services/mapleApi';
 import { VoiceManager } from '../utils/voiceManager';
@@ -79,13 +80,13 @@ export class InteractionHandler {
             await this.handleConfirmDelete(interaction, playlistName);
         } else if (customId === 'cancel_delete') {
             await this.handleCancelDelete(interaction);
-        } 
+        }
         // Queue management
         else if (customId === 'queue_shuffle' || customId === 'queue_skip' || customId === 'queue_clear' || customId === 'queue_show') {
             // These buttons are handled in their respective command collectors
             // We just acknowledge the interaction here to prevent timeouts
             await interaction.deferUpdate();
-        } 
+        }
         // Direct play/queue from search results
         else if (customId.startsWith('play_selected_')) {
             const mapId = parseInt(customId.replace('play_selected_', ''));
@@ -146,15 +147,15 @@ export class InteractionHandler {
                 song.mapName,
                 song.streetName,
                 song.region,
-                song.version
+                song.version,
             );
         }
 
         // Play the first song
         await this.musicService.playSongFromInfo(interaction, playlist.songs[0], true);
-        
+
         await interaction.followUp({
-            content: `Added ${playlist.songs.length - 1} more songs from the playlist to the queue!`
+            content: `Added ${playlist.songs.length - 1} more songs from the playlist to the queue!`,
         });
     }
 
@@ -178,7 +179,7 @@ export class InteractionHandler {
 
         // Create a shuffled copy of the playlist songs
         const shuffledSongs = [...playlist.songs];
-        
+
         // Fisher-Yates shuffle algorithm
         for (let i = shuffledSongs.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -194,15 +195,15 @@ export class InteractionHandler {
                 song.mapName,
                 song.streetName,
                 song.region,
-                song.version
+                song.version,
             );
         }
 
         // Play the first shuffled song immediately
         await this.musicService.playSongFromInfo(interaction, shuffledSongs[0], true);
-        
+
         await interaction.followUp({
-            content: `Added ${shuffledSongs.length - 1} more songs from the shuffled playlist to the queue!`
+            content: `Added ${shuffledSongs.length - 1} more songs from the shuffled playlist to the queue!`,
         });
     }
 
@@ -211,7 +212,7 @@ export class InteractionHandler {
 
         const success = this.musicService.deletePlaylist(
             interaction.user.id,
-            playlistName
+            playlistName,
         );
 
         if (success) {
@@ -221,7 +222,7 @@ export class InteractionHandler {
                 .setFooter({ text: 'You can create a new playlist with /playlist create' });
 
             await interaction.followUp({
-                embeds: [deleteEmbed]
+                embeds: [deleteEmbed],
             });
         } else {
             await interaction.followUp('There was an error deleting the playlist.');
@@ -233,11 +234,11 @@ export class InteractionHandler {
 
         const cancelEmbed = this.musicService.createBaseEmbed('✖️ Deletion Canceled')
             .setColor('#808080' as ColorResolvable)
-            .setDescription(`Your playlist has not been deleted.`)
+            .setDescription('Your playlist has not been deleted.')
             .setFooter({ text: 'Your playlist is safe!' });
 
         await interaction.followUp({
-            embeds: [cancelEmbed]
+            embeds: [cancelEmbed],
         });
     }
 
@@ -271,7 +272,7 @@ export class InteractionHandler {
                 stream,
                 `${mapInfo.name} (${mapInfo.streetName})`,
                 mapId,
-                interaction
+                interaction,
             );
 
             if (success) {
@@ -283,12 +284,12 @@ export class InteractionHandler {
                     .addFields(
                         { name: 'Volume', value: `${VoiceManager.getVolume(interaction.guildId)}%`, inline: true },
                         { name: 'Controls', value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume', inline: true },
-                        { name: 'Save', value: 'Use the buttons below to save this song', inline: true }
+                        { name: 'Save', value: 'Use the buttons below to save this song', inline: true },
                     )
                     .setImage(mapImageUrl);
 
                 await interaction.followUp({
-                    embeds: [nowPlayingEmbed]
+                    embeds: [nowPlayingEmbed],
                 });
             } else {
                 await interaction.followUp('There was an error playing the BGM. Make sure you\'re in a voice channel.');
@@ -322,21 +323,21 @@ export class InteractionHandler {
                 mapInfo.name,
                 mapInfo.streetName,
                 mapInfo.region,
-                mapInfo.version
+                mapInfo.version,
             );
 
             if (success) {
                 // Get queue position
                 const queuePosition = VoiceManager.getQueuePosition(interaction.guildId, mapId);
                 const queueStatus = VoiceManager.isPlaying(interaction.guildId) ? 'in queue' : 'and will play now';
-                
+
                 const queueEmbed = this.musicService.createBaseEmbed('🎵 Added to Queue')
                     .setColor('#0099FF' as ColorResolvable)
                     .setDescription(`**${mapInfo.name}** has been added to the queue ${queueStatus}${queuePosition ? ` at position #${queuePosition}` : ''}!`)
                     .setThumbnail(this.mapleApi.getMapImageUrl(mapId, true));
 
                 await interaction.followUp({
-                    embeds: [queueEmbed]
+                    embeds: [queueEmbed],
                 });
             } else {
                 await interaction.followUp('Failed to add the song to the queue. Make sure you\'re in a voice channel.');
@@ -365,13 +366,13 @@ export class InteractionHandler {
                 mapName: mapInfo.name,
                 streetName: mapInfo.streetName,
                 region: mapInfo.region,
-                version: mapInfo.version
+                version: mapInfo.version,
             };
 
             // Add to favorites
             const success = this.musicService.addToFavorites(
                 interaction.user.id,
-                songInfo
+                songInfo,
             );
 
             if (success) {
@@ -417,30 +418,30 @@ export class InteractionHandler {
                             .setCustomId(`create_playlist_for_${mapId}`)
                             .setLabel('Create New Playlist')
                             .setStyle(ButtonStyle.Success)
-                            .setEmoji('➕')
+                            .setEmoji('➕'),
                     );
 
                 const createResponse = await interaction.followUp({
                     embeds: [createEmbed],
                     components: [createButton],
-                    ephemeral: true
+                    ephemeral: true,
                 });
 
                 // Collector for create playlist button
                 const createCollector = createResponse.createMessageComponentCollector({
                     componentType: ComponentType.Button,
-                    time: 60000
+                    time: 60000,
                 });
 
                 createCollector.on('collect', async (buttonInt: ButtonInteraction) => {
                     if (buttonInt.customId === `create_playlist_for_${mapId}`) {
                         await buttonInt.deferUpdate();
                         const playlistName = `My Playlist ${Date.now()}`;
-                        
+
                         // Create the playlist
                         const success = this.musicService.createPlaylist(
                             buttonInt.user.id,
-                            playlistName
+                            playlistName,
                         );
 
                         if (success) {
@@ -450,13 +451,13 @@ export class InteractionHandler {
                                 mapName: mapInfo.name,
                                 streetName: mapInfo.streetName,
                                 region: mapInfo.region,
-                                version: mapInfo.version
+                                version: mapInfo.version,
                             };
 
                             const addSuccess = this.musicService.addToPlaylist(
                                 buttonInt.user.id,
                                 playlistName,
-                                songInfo
+                                songInfo,
                             );
 
                             if (addSuccess) {
@@ -467,13 +468,13 @@ export class InteractionHandler {
 
                                 await buttonInt.followUp({
                                     embeds: [successEmbed],
-                                    ephemeral: true
+                                    ephemeral: true,
                                 });
                             }
                         } else {
                             await buttonInt.followUp({
-                                content: `Error creating playlist. Please try a different name.`,
-                                ephemeral: true
+                                content: 'Error creating playlist. Please try a different name.',
+                                ephemeral: true,
                             });
                         }
                     }
@@ -491,14 +492,14 @@ export class InteractionHandler {
                         label: playlist.name,
                         description: `Contains ${playlist.songs.length} songs`,
                         value: playlist.name,
-                    }))
+                    })),
                 );
 
             // Add an option to create a new playlist
             selectMenu.addOptions({
                 label: '➕ Create New Playlist',
                 description: 'Create a new playlist for this map',
-                value: 'create_new_playlist'
+                value: 'create_new_playlist',
             });
 
             const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>()
@@ -512,13 +513,13 @@ export class InteractionHandler {
             const selectResponse = await interaction.followUp({
                 embeds: [selectEmbed],
                 components: [selectRow],
-                ephemeral: true
+                ephemeral: true,
             });
 
             // Collector for playlist selection
             const selectCollector = selectResponse.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
-                time: 60000
+                time: 60000,
             });
 
             selectCollector.on('collect', async (selectInt: StringSelectMenuInteraction) => {
@@ -529,11 +530,11 @@ export class InteractionHandler {
                 // Handle creating a new playlist
                 if (selectedValue === 'create_new_playlist') {
                     const playlistName = `My Playlist ${Date.now()}`;
-                    
+
                     // Create the playlist
                     const success = this.musicService.createPlaylist(
                         selectInt.user.id,
-                        playlistName
+                        playlistName,
                     );
 
                     if (success) {
@@ -543,13 +544,13 @@ export class InteractionHandler {
                             mapName: mapInfo.name,
                             streetName: mapInfo.streetName,
                             region: mapInfo.region,
-                            version: mapInfo.version
+                            version: mapInfo.version,
                         };
 
                         const addSuccess = this.musicService.addToPlaylist(
                             selectInt.user.id,
                             playlistName,
-                            songInfo
+                            songInfo,
                         );
 
                         if (addSuccess) {
@@ -560,13 +561,13 @@ export class InteractionHandler {
 
                             await selectInt.followUp({
                                 embeds: [successEmbed],
-                                ephemeral: true
+                                ephemeral: true,
                             });
                         }
                     } else {
                         await selectInt.followUp({
-                            content: `Error creating playlist. Please try a different name.`,
-                            ephemeral: true
+                            content: 'Error creating playlist. Please try a different name.',
+                            ephemeral: true,
                         });
                     }
                     return;
@@ -578,13 +579,13 @@ export class InteractionHandler {
                     mapName: mapInfo.name,
                     streetName: mapInfo.streetName,
                     region: mapInfo.region,
-                    version: mapInfo.version
+                    version: mapInfo.version,
                 };
 
                 const addSuccess = this.musicService.addToPlaylist(
                     selectInt.user.id,
                     selectedValue,
-                    songInfo
+                    songInfo,
                 );
 
                 if (addSuccess) {
@@ -595,12 +596,12 @@ export class InteractionHandler {
 
                     await selectInt.followUp({
                         embeds: [successEmbed],
-                        ephemeral: true
+                        ephemeral: true,
                     });
                 } else {
                     await selectInt.followUp({
                         content: `This map is already in your playlist "${selectedValue}".`,
-                        ephemeral: true
+                        ephemeral: true,
                     });
                 }
             });

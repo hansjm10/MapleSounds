@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { MapleApiService, MapInfo } from '../../services/mapleApi';
+import type { MapInfo } from '../../services/mapleApi';
+import { MapleApiService } from '../../services/mapleApi';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -14,9 +15,9 @@ describe('MapleApiService', () => {
 
   describe('searchMaps', () => {
     it('should return mapped results when search is successful', async () => {
-      const mockMapData: Partial<MapInfo>[] = [
+      const mockMapData: Array<Partial<MapInfo>> = [
         { name: 'Henesys', streetName: 'Market', id: 100000000 },
-        { name: 'Henesys Hunting Ground', streetName: 'Hunting Ground', id: 100010000 }
+        { name: 'Henesys Hunting Ground', streetName: 'Hunting Ground', id: 100010000 },
       ];
 
       mockedAxios.get.mockResolvedValueOnce({ data: mockMapData });
@@ -25,13 +26,13 @@ describe('MapleApiService', () => {
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://maplestory.io/api/gms/253/map',
-        { params: { searchFor: 'Henesys' } }
+        { params: { searchFor: 'Henesys' } },
       );
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
         ...mockMapData[0],
         region: 'gms',
-        version: '253'
+        version: '253',
       });
     });
 
@@ -53,7 +54,7 @@ describe('MapleApiService', () => {
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://maplestory.io/api/gms/253/map/100000000/bgm',
-        { responseType: 'stream' }
+        { responseType: 'stream' },
       );
       expect(result).toBe(mockStream);
     });
@@ -75,7 +76,7 @@ describe('MapleApiService', () => {
       const result = await mapleApiService.getMapDetails(100000000);
 
       expect(mockedAxios.get).toHaveBeenCalledWith(
-        'https://maplestory.io/api/gms/253/map/100000000'
+        'https://maplestory.io/api/gms/253/map/100000000',
       );
       expect(result).toEqual(mockMapDetails);
     });

@@ -1,10 +1,11 @@
 // src/commands/favoritebgm.ts
 
-import {
+import type {
     CommandInteraction,
+    ColorResolvable } from 'discord.js';
+import {
     SlashCommandBuilder,
     EmbedBuilder,
-    ColorResolvable,
 } from 'discord.js';
 import { MusicCollectionService } from '../services/musicCollectionService';
 import { VoiceManager } from '../utils/voiceManager';
@@ -39,7 +40,7 @@ export class FavoritebgmCommand {
         // Add to favorites
         const success = this.musicService.addToFavorites(
             interaction.user.id,
-            currentBgm
+            currentBgm,
         );
 
         if (success) {

@@ -1,10 +1,12 @@
 // src/commands/playlistbgm.ts
 
-import {
+import type {
     CommandInteraction,
+    ColorResolvable,
+    ChatInputCommandInteraction } from 'discord.js';
+import {
     SlashCommandBuilder,
     EmbedBuilder,
-    ColorResolvable,
     ActionRowBuilder,
     StringSelectMenuBuilder,
     ButtonBuilder,
@@ -12,8 +14,7 @@ import {
     StringSelectMenuInteraction,
     ButtonInteraction,
     ComponentType,
-    StringSelectMenuOptionBuilder, 
-    ChatInputCommandInteraction, 
+    StringSelectMenuOptionBuilder,
     Interaction,
 } from 'discord.js';
 import { SongInfo } from '../services/userDataService';
@@ -37,8 +38,8 @@ export class PlaylistbgmCommand {
                 .addStringOption(option =>
                     option.setName('name')
                         .setDescription('Name for your new playlist')
-                        .setRequired(true)
-                )
+                        .setRequired(true),
+                ),
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -47,13 +48,13 @@ export class PlaylistbgmCommand {
                 .addStringOption(option =>
                     option.setName('name')
                         .setDescription('Playlist to add the BGM to')
-                        .setRequired(true)
-                )
+                        .setRequired(true),
+                ),
         )
         .addSubcommand(subcommand =>
             subcommand
                 .setName('list')
-                .setDescription('List all your playlists')
+                .setDescription('List all your playlists'),
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -62,8 +63,8 @@ export class PlaylistbgmCommand {
                 .addStringOption(option =>
                     option.setName('name')
                         .setDescription('Playlist to view')
-                        .setRequired(true)
-                )
+                        .setRequired(true),
+                ),
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -72,8 +73,8 @@ export class PlaylistbgmCommand {
                 .addStringOption(option =>
                     option.setName('name')
                         .setDescription('Playlist to play')
-                        .setRequired(true)
-                )
+                        .setRequired(true),
+                ),
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -82,8 +83,8 @@ export class PlaylistbgmCommand {
                 .addStringOption(option =>
                     option.setName('name')
                         .setDescription('Playlist to delete')
-                        .setRequired(true)
-                )
+                        .setRequired(true),
+                ),
         )
         .addSubcommand(subcommand =>
             subcommand
@@ -92,14 +93,14 @@ export class PlaylistbgmCommand {
                 .addStringOption(option =>
                     option.setName('name')
                         .setDescription('Playlist to remove from')
-                        .setRequired(true)
+                        .setRequired(true),
                 )
                 .addIntegerOption(option =>
                     option.setName('position')
                         .setDescription('Position of the song to remove (1-based)')
                         .setRequired(true)
-                        .setMinValue(1)
-                )
+                        .setMinValue(1),
+                ),
         );
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -144,7 +145,7 @@ export class PlaylistbgmCommand {
 
         const success = this.musicService.createPlaylist(
             interaction.user.id,
-            playlistName
+            playlistName,
         );
 
         if (success) {
@@ -192,7 +193,7 @@ export class PlaylistbgmCommand {
         const success = this.musicService.addToPlaylist(
             interaction.user.id,
             playlistName,
-            currentBgm
+            currentBgm,
         );
 
         if (success) {
@@ -227,7 +228,7 @@ export class PlaylistbgmCommand {
             embed.addFields({
                 name: `${index + 1}. ${playlist.name}`,
                 value: `Contains ${playlist.songs.length} songs\nCreated: ${createdDate}`,
-                inline: true
+                inline: true,
             });
         });
 
@@ -243,12 +244,12 @@ export class PlaylistbgmCommand {
                     .setCustomId('select_playlist_to_view')
                     .setLabel('View a Playlist')
                     .setStyle(ButtonStyle.Primary)
-                    .setEmoji('👁️')
+                    .setEmoji('👁️'),
             );
 
         await interaction.followUp({
             embeds: [embed],
-            components: [row]
+            components: [row],
         });
     }
 
@@ -274,13 +275,13 @@ export class PlaylistbgmCommand {
 
         // Use the centralized service to create playlist embed
         const embed = this.musicService.createPlaylistEmbed(playlist);
-        
+
         // Create action row using the centralized service
         const row = this.musicService.createPlaylistActionRow(playlistName);
 
         await interaction.followUp({
             embeds: [embed],
-            components: [row]
+            components: [row],
         });
     }
 
@@ -323,14 +324,14 @@ export class PlaylistbgmCommand {
                     song.mapName,
                     song.streetName,
                     song.region,
-                    song.version
+                    song.version,
                 );
             }
 
             // Create a "starting playback" message
             await interaction.followUp(`Starting playback of playlist "${playlistName}"...`);
-            
-            // Play the first song 
+
+            // Play the first song
             if (interaction.isButton()) {
                 await this.musicService.playSongFromInfo(interaction, playlist.songs[0]);
             } else {
@@ -339,16 +340,16 @@ export class PlaylistbgmCommand {
                     content: `Now playing the first song from "${playlistName}"`,
                     embeds: [
                         this.musicService.createBaseEmbed(`🎵 Now Playing from: ${playlistName}`)
-                            .setDescription(`**${playlist.songs[0].mapName}** (${playlist.songs[0].streetName})`)
-                    ]
+                            .setDescription(`**${playlist.songs[0].mapName}** (${playlist.songs[0].streetName})`),
+                    ],
                 });
             }
-            
+
             // Notify about queued songs
             if (playlist.songs.length > 1) {
                 await interaction.followUp({
                     content: `Added ${playlist.songs.length - 1} more songs from the playlist to the queue!`,
-                    ephemeral: true
+                    ephemeral: true,
                 });
             }
         } catch (error) {
@@ -378,7 +379,7 @@ export class PlaylistbgmCommand {
             .setDescription(`Are you sure you want to delete your playlist **${playlistName}**?\nThis action cannot be undone.`)
             .addFields({
                 name: 'Playlist Details',
-                value: `Contains ${playlist.songs.length} songs\nCreated: ${new Date(playlist.createdAt).toLocaleDateString()}`
+                value: `Contains ${playlist.songs.length} songs\nCreated: ${new Date(playlist.createdAt).toLocaleDateString()}`,
             });
 
         // Create confirmation buttons using the centralized service
@@ -386,7 +387,7 @@ export class PlaylistbgmCommand {
 
         await interaction.followUp({
             embeds: [embed],
-            components: [row]
+            components: [row],
         });
     }
 
@@ -423,7 +424,7 @@ export class PlaylistbgmCommand {
         const success = this.musicService.removeFromPlaylist(
             interaction.user.id,
             playlistName,
-            position - 1 // Convert to 0-based index
+            position - 1, // Convert to 0-based index
         );
 
         if (success) {
@@ -433,7 +434,7 @@ export class PlaylistbgmCommand {
                 .setFooter({ text: `Your playlist now has ${playlist.songs.length - 1} songs` });
 
             await interaction.followUp({
-                embeds: [embed]
+                embeds: [embed],
             });
         } else {
             await interaction.followUp('There was an error removing the song from your playlist.');

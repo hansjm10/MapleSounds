@@ -4,13 +4,12 @@ import * as dotenv from 'dotenv';
 import { MaplebgmCommand } from './commands/maplebgm';
 import { StopbgmCommand } from './commands/stopbgm';
 import { VolumebgmCommand } from './commands/volumebgm';
-import { FavoritebgmCommand } from "./commands/favoritebgm";
-import { FavoritesbgmCommand } from "./commands/favoritesbgm";
-import { PlaylistbgmCommand } from "./commands/playlistbgm";
-import { FindbgmCommand } from "./commands/findbgm";
-import { QueuebgmCommand } from "./commands/queuebgm";
+import { FavoritebgmCommand } from './commands/favoritebgm';
+import { FavoritesbgmCommand } from './commands/favoritesbgm';
+import { PlaylistbgmCommand } from './commands/playlistbgm';
+import { FindbgmCommand } from './commands/findbgm';
+import { QueuebgmCommand } from './commands/queuebgm';
 dotenv.config({ path: '../.env' });
-
 
 const commands = [
     new MaplebgmCommand().data.toJSON(),
@@ -20,7 +19,7 @@ const commands = [
     new FavoritesbgmCommand().data.toJSON(),
     new PlaylistbgmCommand().data.toJSON(),
     new FindbgmCommand().data.toJSON(),
-    new QueuebgmCommand().data.toJSON()
+    new QueuebgmCommand().data.toJSON(),
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as string);

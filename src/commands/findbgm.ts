@@ -1,21 +1,23 @@
 // src/commands/findbgm.ts
 
+import type {
+    StringSelectMenuInteraction,
+    ColorResolvable,
+    ButtonInteraction,
+    ChatInputCommandInteraction } from 'discord.js';
 import {
     CommandInteraction,
     SlashCommandBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder,
-    StringSelectMenuInteraction,
     ComponentType,
     EmbedBuilder,
-    ColorResolvable,
     ButtonBuilder,
     ButtonStyle,
-    ButtonInteraction,
-    ChatInputCommandInteraction,
 } from 'discord.js';
-import { MapleApiService, MapInfo } from '../services/mapleApi';
-import { SongInfo } from '../services/userDataService';
+import type { MapInfo } from '../services/mapleApi';
+import { MapleApiService } from '../services/mapleApi';
+import type { SongInfo } from '../services/userDataService';
 import { MusicCollectionService } from '../services/musicCollectionService';
 
 export class FindbgmCommand {
@@ -34,7 +36,7 @@ export class FindbgmCommand {
         .addStringOption(option =>
             option.setName('search')
                 .setDescription('Search term for Maplestory map')
-                .setRequired(true)
+                .setRequired(true),
         )
         .addStringOption(option =>
             option.setName('region')
@@ -46,13 +48,13 @@ export class FindbgmCommand {
                     { name: 'JMS (Japan)', value: 'jms' },
                     { name: 'CMS (China)', value: 'cms' },
                     { name: 'TMS (Taiwan)', value: 'tms' },
-                    { name: 'MSEA (Southeast Asia)', value: 'sea' }
-                )
+                    { name: 'MSEA (Southeast Asia)', value: 'sea' },
+                ),
         )
         .addStringOption(option =>
             option.setName('version')
                 .setDescription('Game version (default: 253)')
-                .setRequired(false)
+                .setRequired(false),
         );
 
     // Command execution
@@ -88,7 +90,7 @@ export class FindbgmCommand {
         // Create a search results embed
         const searchEmbed = new EmbedBuilder()
             .setColor('#FFA500' as ColorResolvable)
-            .setTitle(`🔍 MapleStory Map Search`)
+            .setTitle('🔍 MapleStory Map Search')
             .setDescription(`Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\nSelect one to view details or add to a playlist:`)
             .setThumbnail('https://i.imgur.com/nGyPbIj.png') // MapleStory logo
             .setFooter({ text: 'MapleStory BGM Finder | Select a map from the dropdown menu below' });
@@ -102,7 +104,7 @@ export class FindbgmCommand {
                     label: map.name,
                     description: `${map.streetName} (ID: ${map.id})`,
                     value: map.id.toString(),
-                }))
+                })),
             );
 
         const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(mapSelectMenu);
@@ -122,7 +124,7 @@ export class FindbgmCommand {
         });
 
         collector.on('collect', async (selectInteraction: StringSelectMenuInteraction) => {
-            console.log(`[DEBUG] Select interaction received`);
+            console.log('[DEBUG] Select interaction received');
 
             // Defer the update to acknowledge the interaction
             await selectInteraction.deferUpdate();
@@ -140,7 +142,7 @@ export class FindbgmCommand {
             try {
                 // Get map details
                 const mapImageUrl = apiService.getMapImageUrl(selectedMapId);
-                
+
                 // Create map details embed
                 const detailsEmbed = new EmbedBuilder()
                     .setColor('#3498DB' as ColorResolvable)
@@ -149,7 +151,7 @@ export class FindbgmCommand {
                     .addFields(
                         { name: 'Region', value: selectedMap.region.toUpperCase(), inline: true },
                         { name: 'Version', value: selectedMap.version, inline: true },
-                        { name: 'BGM Link', value: `[Download](https://maplestory.io/api/${selectedMap.region}/${selectedMap.version}/map/${selectedMapId}/bgm)`, inline: true }
+                        { name: 'BGM Link', value: `[Download](https://maplestory.io/api/${selectedMap.region}/${selectedMap.version}/map/${selectedMapId}/bgm)`, inline: true },
                     )
                     .setImage(mapImageUrl)
                     .setTimestamp()
@@ -167,7 +169,7 @@ export class FindbgmCommand {
                             .setCustomId(`add_to_playlist_${selectedMapId}`)
                             .setLabel('Add to Playlist')
                             .setStyle(ButtonStyle.Success)
-                            .setEmoji('📋')
+                            .setEmoji('📋'),
                     );
 
                 // Send the details and buttons
@@ -184,7 +186,7 @@ export class FindbgmCommand {
 
                 buttonCollector.on('collect', async (buttonInteraction: ButtonInteraction) => {
                     const customId = buttonInteraction.customId;
-                    
+
                     // Handle favorite button
                     if (customId === `favorite_map_${selectedMapId}`) {
                         await this.handleAddToFavorites(buttonInteraction, selectedMap);
@@ -214,7 +216,7 @@ export class FindbgmCommand {
 
                 try {
                     await interaction.followUp({
-                        embeds: [timeoutEmbed]
+                        embeds: [timeoutEmbed],
                     });
                 } catch (error) {
                     console.error('Error sending timeout message:', error);
@@ -232,12 +234,12 @@ export class FindbgmCommand {
             mapName: map.name,
             streetName: map.streetName,
             region: map.region,
-            version: map.version
+            version: map.version,
         };
 
         const success = this.musicService.addToFavorites(
             interaction.user.id,
-            songInfo
+            songInfo,
         );
 
         if (success) {
@@ -248,9 +250,9 @@ export class FindbgmCommand {
 
             await interaction.followUp({ embeds: [embed], ephemeral: true });
         } else {
-            await interaction.followUp({ 
+            await interaction.followUp({
                 content: 'This map is already in your favorites!',
-                ephemeral: true
+                ephemeral: true,
             });
         }
     }
@@ -275,19 +277,19 @@ export class FindbgmCommand {
                         .setCustomId(`create_playlist_for_${map.id}`)
                         .setLabel('Create New Playlist')
                         .setStyle(ButtonStyle.Success)
-                        .setEmoji('➕')
+                        .setEmoji('➕'),
                 );
 
             const createResponse = await interaction.followUp({
                 embeds: [createEmbed],
                 components: [createButton],
-                ephemeral: true
+                ephemeral: true,
             });
 
             // Collector for create playlist button
             const createCollector = createResponse.createMessageComponentCollector({
                 componentType: ComponentType.Button,
-                time: 60000
+                time: 60000,
             });
 
             createCollector.on('collect', async (buttonInt: ButtonInteraction) => {
@@ -306,20 +308,20 @@ export class FindbgmCommand {
                                 min_length: 1,
                                 max_length: 50,
                                 required: true,
-                                placeholder: 'Enter a name for your new playlist'
-                            }]
-                        }]
+                                placeholder: 'Enter a name for your new playlist',
+                            }],
+                        }],
                     };
 
                     // This would be implemented with a modal in a real implementation
                     // For now, create a default playlist name
                     await buttonInt.deferUpdate();
                     const playlistName = `My Playlist ${Date.now()}`;
-                    
+
                     // Create the playlist
                     const success = this.musicService.createPlaylist(
                         buttonInt.user.id,
-                        playlistName
+                        playlistName,
                     );
 
                     if (success) {
@@ -329,13 +331,13 @@ export class FindbgmCommand {
                             mapName: map.name,
                             streetName: map.streetName,
                             region: map.region,
-                            version: map.version
+                            version: map.version,
                         };
 
                         const addSuccess = this.musicService.addToPlaylist(
                             buttonInt.user.id,
                             playlistName,
-                            songInfo
+                            songInfo,
                         );
 
                         if (addSuccess) {
@@ -346,13 +348,13 @@ export class FindbgmCommand {
 
                             await buttonInt.followUp({
                                 embeds: [successEmbed],
-                                ephemeral: true
+                                ephemeral: true,
                             });
                         }
                     } else {
                         await buttonInt.followUp({
-                            content: `Error creating playlist. Please try a different name.`,
-                            ephemeral: true
+                            content: 'Error creating playlist. Please try a different name.',
+                            ephemeral: true,
                         });
                     }
                 }
@@ -370,14 +372,14 @@ export class FindbgmCommand {
                     label: playlist.name,
                     description: `Contains ${playlist.songs.length} songs`,
                     value: playlist.name,
-                }))
+                })),
             );
 
         // Add an option to create a new playlist
         selectMenu.addOptions({
             label: '➕ Create New Playlist',
             description: 'Create a new playlist for this map',
-            value: 'create_new_playlist'
+            value: 'create_new_playlist',
         });
 
         const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>()
@@ -391,13 +393,13 @@ export class FindbgmCommand {
         const selectResponse = await interaction.followUp({
             embeds: [selectEmbed],
             components: [selectRow],
-            ephemeral: true
+            ephemeral: true,
         });
 
         // Collector for playlist selection
         const selectCollector = selectResponse.createMessageComponentCollector({
             componentType: ComponentType.StringSelect,
-            time: 60000
+            time: 60000,
         });
 
         selectCollector.on('collect', async (selectInt: StringSelectMenuInteraction) => {
@@ -410,11 +412,11 @@ export class FindbgmCommand {
                 // In a real implementation, we would use a modal here
                 // For now, create a default playlist name
                 const playlistName = `My Playlist ${Date.now()}`;
-                
+
                 // Create the playlist
                 const success = this.musicService.createPlaylist(
                     selectInt.user.id,
-                    playlistName
+                    playlistName,
                 );
 
                 if (success) {
@@ -424,13 +426,13 @@ export class FindbgmCommand {
                         mapName: map.name,
                         streetName: map.streetName,
                         region: map.region,
-                        version: map.version
+                        version: map.version,
                     };
 
                     const addSuccess = this.musicService.addToPlaylist(
                         selectInt.user.id,
                         playlistName,
-                        songInfo
+                        songInfo,
                     );
 
                     if (addSuccess) {
@@ -441,13 +443,13 @@ export class FindbgmCommand {
 
                         await selectInt.followUp({
                             embeds: [successEmbed],
-                            ephemeral: true
+                            ephemeral: true,
                         });
                     }
                 } else {
                     await selectInt.followUp({
-                        content: `Error creating playlist. Please try a different name.`,
-                        ephemeral: true
+                        content: 'Error creating playlist. Please try a different name.',
+                        ephemeral: true,
                     });
                 }
                 return;
@@ -459,13 +461,13 @@ export class FindbgmCommand {
                 mapName: map.name,
                 streetName: map.streetName,
                 region: map.region,
-                version: map.version
+                version: map.version,
             };
 
             const addSuccess = this.musicService.addToPlaylist(
                 selectInt.user.id,
                 selectedValue,
-                songInfo
+                songInfo,
             );
 
             if (addSuccess) {
@@ -476,12 +478,12 @@ export class FindbgmCommand {
 
                 await selectInt.followUp({
                     embeds: [successEmbed],
-                    ephemeral: true
+                    ephemeral: true,
                 });
             } else {
                 await selectInt.followUp({
                     content: `This map is already in your playlist "${selectedValue}".`,
-                    ephemeral: true
+                    ephemeral: true,
                 });
             }
         });

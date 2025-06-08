@@ -1,4 +1,5 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import type { ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 import { VoiceManager } from '../utils/voiceManager';
 
 export class VolumebgmCommand {
@@ -10,7 +11,7 @@ export class VolumebgmCommand {
                 .setDescription('Volume level (0-100)')
                 .setRequired(true)
                 .setMinValue(0)
-                .setMaxValue(100)
+                .setMaxValue(100),
         );
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
