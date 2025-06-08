@@ -1,5 +1,6 @@
 // src/commands/stopbgm.ts - Updated with embeds
-import { CommandInteraction, SlashCommandBuilder, EmbedBuilder, ColorResolvable } from 'discord.js';
+import type { CommandInteraction, ColorResolvable } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { VoiceManager } from '../utils/voiceManager';
 
 export class StopbgmCommand {

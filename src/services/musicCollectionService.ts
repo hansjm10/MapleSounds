@@ -1,18 +1,20 @@
 // src/services/musicCollectionService.ts
 
-import { SongInfo, UserDataService, Playlist } from './userDataService';
+import type { SongInfo, Playlist } from './userDataService';
+import { UserDataService } from './userDataService';
 import { VoiceManager } from '../utils/voiceManager';
 import { MapleApiService } from './mapleApi';
+import type {
+    ButtonInteraction,
+    ColorResolvable } from 'discord.js';
 import {
     Interaction,
-    ButtonInteraction,
     EmbedBuilder,
-    ColorResolvable,
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
 } from 'discord.js';
-import { Readable } from 'stream';
+import type { Readable } from 'stream';
 
 /**
  * Service to centralize all music collection (favorites and playlists) related functionality
@@ -78,7 +80,7 @@ export class MusicCollectionService {
      */
     public createFavoritesEmbed(userId: string): { embed: EmbedBuilder, row: ActionRowBuilder<ButtonBuilder> } {
         const favorites = this.getFavorites(userId);
-        
+
         const embed = new EmbedBuilder()
             .setColor('#FFD700' as ColorResolvable)
             .setTitle('⭐ Your Favorite MapleStory BGMs')
@@ -91,7 +93,7 @@ export class MusicCollectionService {
             embed.addFields({
                 name: `${index + 1}. ${song.mapName}`,
                 value: `${song.streetName} (ID: ${song.mapId})`,
-                inline: true
+                inline: true,
             });
         });
 
@@ -104,7 +106,7 @@ export class MusicCollectionService {
 
         const row = new ActionRowBuilder<ButtonBuilder>()
             .addComponents(playButton);
-            
+
         return { embed, row };
     }
 
@@ -160,8 +162,8 @@ export class MusicCollectionService {
             .setColor('#9B59B6' as ColorResolvable)
             .setTitle(`🎵 Playlist: ${playlist.name}`)
             .setDescription(`${playlist.songs.length} songs in this playlist`)
-            .setFooter({ 
-                text: `Created: ${new Date(playlist.createdAt).toLocaleDateString()} • Updated: ${new Date(playlist.updatedAt).toLocaleDateString()}` 
+            .setFooter({
+                text: `Created: ${new Date(playlist.createdAt).toLocaleDateString()} • Updated: ${new Date(playlist.updatedAt).toLocaleDateString()}`,
             });
 
         // Add songs as fields
@@ -169,7 +171,7 @@ export class MusicCollectionService {
             embed.addFields({
                 name: `${index + 1}. ${song.mapName}`,
                 value: `${song.streetName} (ID: ${song.mapId})`,
-                inline: true
+                inline: true,
             });
         });
 
@@ -231,7 +233,7 @@ export class MusicCollectionService {
     public async playSongFromInfo(
         interaction: ButtonInteraction,
         song: SongInfo,
-        alreadyDeferred: boolean = false
+        alreadyDeferred: boolean = false,
     ): Promise<void> {
         try {
             // Only defer if not already deferred
@@ -252,7 +254,7 @@ export class MusicCollectionService {
                 .setFooter({ text: 'Please wait while I connect to voice and prepare the BGM' });
 
             await interaction.followUp({
-                embeds: [loadingEmbed]
+                embeds: [loadingEmbed],
             });
 
             // Get the BGM stream
@@ -279,7 +281,7 @@ export class MusicCollectionService {
     private async playAudio(
         interaction: ButtonInteraction,
         stream: Readable,
-        song: SongInfo
+        song: SongInfo,
     ): Promise<void> {
         try {
             // Create a "now playing" embed
@@ -291,7 +293,7 @@ export class MusicCollectionService {
                 .addFields(
                     { name: 'Volume', value: `${VoiceManager.getVolume(interaction.guildId!)}%`, inline: true },
                     { name: 'Controls', value: 'Use `/stopbgm` to stop playback\nUse `/volumebgm` to adjust volume', inline: true },
-                    { name: 'Download', value: `Download the BGM [here](https://maplestory.io/api/${song.region}/${song.version}/map/${song.mapId}/bgm)`, inline: true }
+                    { name: 'Download', value: `Download the BGM [here](https://maplestory.io/api/${song.region}/${song.version}/map/${song.mapId}/bgm)`, inline: true },
                 )
                 .setImage(mapImageUrl)
                 .setTimestamp()
@@ -303,12 +305,12 @@ export class MusicCollectionService {
                 stream,
                 `${song.mapName} (${song.streetName})`,
                 song.mapId,
-                interaction
+                interaction,
             );
 
             // Send the now playing embed
             await interaction.followUp({
-                embeds: [nowPlayingEmbed]
+                embeds: [nowPlayingEmbed],
             });
         } catch (error) {
             console.error('Error in playAudio:', error);

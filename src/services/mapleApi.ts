@@ -33,7 +33,7 @@ export class MapleApiService {
                     params: {
                         searchFor: searchTerm,
                     },
-                }
+                },
             );
             return response.data.map(map => ({
                 ...map,
@@ -64,7 +64,7 @@ export class MapleApiService {
                     version: this.version,
                 };
             }
-            
+
             // Fallback to basic info
             return {
                 name: `Map ${mapId}`,
@@ -91,7 +91,7 @@ export class MapleApiService {
                 `${this.baseUrl}/${this.region}/${this.version}/map/${mapId}/bgm`,
                 {
                     responseType: 'stream',
-                }
+                },
             );
             return response.data;
         } catch (error) {
@@ -108,7 +108,7 @@ export class MapleApiService {
     async getMapDetails(mapId: number): Promise<any> {
         try {
             const response = await axios.get(
-                `${this.baseUrl}/${this.region}/${this.version}/map/${mapId}`
+                `${this.baseUrl}/${this.region}/${this.version}/map/${mapId}`,
             );
             return response.data;
         } catch (error) {

@@ -4,11 +4,11 @@ import * as dotenv from 'dotenv';
 import { MaplebgmCommand } from './commands/maplebgm';
 import { StopbgmCommand } from './commands/stopbgm';
 import { VolumebgmCommand } from './commands/volumebgm';
-import { FavoritebgmCommand } from "./commands/favoritebgm";
-import { FavoritesbgmCommand } from "./commands/favoritesbgm";
-import { PlaylistbgmCommand } from "./commands/playlistbgm";
-import { FindbgmCommand } from "./commands/findbgm";
-import { QueuebgmCommand } from "./commands/queuebgm";
+import { FavoritebgmCommand } from './commands/favoritebgm';
+import { FavoritesbgmCommand } from './commands/favoritesbgm';
+import { PlaylistbgmCommand } from './commands/playlistbgm';
+import { FindbgmCommand } from './commands/findbgm';
+import { QueuebgmCommand } from './commands/queuebgm';
 import { InteractionHandler } from './handlers/interactionHandler';
 
 dotenv.config({ path: '../.env' });

@@ -1,7 +1,8 @@
 // src/commands/favoritesbgm.ts
 
+import type {
+    CommandInteraction } from 'discord.js';
 import {
-    CommandInteraction,
     SlashCommandBuilder,
 } from 'discord.js';
 import { MusicCollectionService } from '../services/musicCollectionService';
@@ -32,7 +33,7 @@ export class FavoritesbgmCommand {
 
         await interaction.followUp({
             embeds: [embed],
-            components: [row]
+            components: [row],
         });
     }
 }

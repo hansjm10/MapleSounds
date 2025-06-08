@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { UserDataService, SongInfo, Playlist } from '../../services/userDataService';
+import type { SongInfo } from '../../services/userDataService';
+import { UserDataService, Playlist } from '../../services/userDataService';
 
 jest.mock('fs');
 const mockedFs = fs as jest.Mocked<typeof fs>;
@@ -15,7 +16,7 @@ describe('UserDataService', () => {
     mapName: 'Henesys',
     streetName: 'Market',
     region: 'gms',
-    version: '253'
+    version: '253',
   };
 
   beforeEach(() => {
@@ -141,10 +142,10 @@ describe('UserDataService', () => {
 
     it('should handle corrupted data file', () => {
       mockedFs.readFileSync.mockReturnValue('invalid json');
-      
+
       const newService = new UserDataService(testDataDir);
       const favorites = newService.getFavorites(userId);
-      
+
       expect(favorites).toEqual([]);
     });
   });

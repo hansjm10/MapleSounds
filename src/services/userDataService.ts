@@ -33,7 +33,7 @@ export class UserDataService {
         const possiblePaths = [
             path.join(process.cwd(), dataDirectory, 'userdata.json'),
             path.join(process.cwd(), 'src', 'data', 'userdata.json'),
-            path.join(process.cwd(), 'data', 'userdata.json')
+            path.join(process.cwd(), 'data', 'userdata.json'),
         ];
 
         // Find the first path that exists, or use the default
@@ -87,8 +87,8 @@ export class UserDataService {
                 name: p.name || 'Unnamed Playlist',
                 songs: Array.isArray(p.songs) ? p.songs : [],
                 createdAt: p.createdAt || new Date().toISOString(),
-                updatedAt: p.updatedAt || new Date().toISOString()
-            })) : []
+                updatedAt: p.updatedAt || new Date().toISOString(),
+            })) : [],
         };
     }
 
@@ -137,7 +137,7 @@ export class UserDataService {
             this.data.set(userId, {
                 userId,
                 favorites: [],
-                playlists: []
+                playlists: [],
             });
             this.saveData();
         }
@@ -153,40 +153,40 @@ export class UserDataService {
     addToFavorites(userId: string, song: SongInfo): boolean {
         try {
             console.log(`[DEBUG] Adding favorite for user ${userId}. Current data path: ${this.dataPath}`);
-            console.log(`[DEBUG] Song to add:`, song);
-            
+            console.log('[DEBUG] Song to add:', song);
+
             const userData = this.getUserData(userId);
-            console.log(`[DEBUG] Current user data before adding:`, userData);
+            console.log('[DEBUG] Current user data before adding:', userData);
 
             // Ensure mapId is a number
             const normalizedSong = {
                 ...song,
-                mapId: Number(song.mapId)
+                mapId: Number(song.mapId),
             };
 
             // Check if already favorited
             if (userData.favorites.some(fav => fav.mapId === normalizedSong.mapId)) {
-                console.log(`[DEBUG] Song already in favorites`);
+                console.log('[DEBUG] Song already in favorites');
                 return false;
             }
 
             // Add the favorite
             userData.favorites.push(normalizedSong);
-            
+
             // Update the Map
             this.data.set(userId, userData);
-            console.log(`[DEBUG] Updated user data in memory:`, this.data.get(userId));
+            console.log('[DEBUG] Updated user data in memory:', this.data.get(userId));
 
             // Save data and return success/failure
             const saveResult = this.saveData();
-            console.log(`[DEBUG] Save result:`, saveResult);
-            
+            console.log('[DEBUG] Save result:', saveResult);
+
             if (!saveResult) {
                 console.error(`Failed to save favorites for user ${userId}`);
             } else {
                 // Verify the save by reading the file
                 const fileContent = fs.readFileSync(this.dataPath, 'utf-8');
-                console.log(`[DEBUG] File content after save:`, fileContent);
+                console.log('[DEBUG] File content after save:', fileContent);
             }
             return saveResult;
         } catch (error) {
@@ -226,17 +226,17 @@ export class UserDataService {
     getFavorites(userId: string): SongInfo[] {
         try {
             console.log(`[DEBUG] Getting favorites for user ${userId}. Current data path: ${this.dataPath}`);
-            
+
             // Force reload data from disk to ensure we have latest
             this.loadData();
-            
+
             const userData = this.getUserData(userId);
-            console.log(`[DEBUG] User data from memory:`, userData);
-            
+            console.log('[DEBUG] User data from memory:', userData);
+
             // Also check file directly
             const fileContent = fs.readFileSync(this.dataPath, 'utf-8');
-            console.log(`[DEBUG] Current file content:`, fileContent);
-            
+            console.log('[DEBUG] Current file content:', fileContent);
+
             return userData.favorites;
         } catch (error) {
             console.error(`Error getting favorites for user ${userId}:`, error);
@@ -264,7 +264,7 @@ export class UserDataService {
                 name: playlistName,
                 songs: [],
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
             });
 
             return this.saveData();
@@ -284,7 +284,7 @@ export class UserDataService {
     addToPlaylist(userId: string, playlistName: string, song: SongInfo): boolean {
         const userData = this.getUserData(userId);
         const playlist = userData.playlists.find(
-            p => p.name.toLowerCase() === playlistName.toLowerCase()
+            p => p.name.toLowerCase() === playlistName.toLowerCase(),
         );
 
         if (!playlist) {
@@ -312,7 +312,7 @@ export class UserDataService {
     removeFromPlaylist(userId: string, playlistName: string, index: number): boolean {
         const userData = this.getUserData(userId);
         const playlist = userData.playlists.find(
-            p => p.name.toLowerCase() === playlistName.toLowerCase()
+            p => p.name.toLowerCase() === playlistName.toLowerCase(),
         );
 
         if (!playlist || index < 0 || index >= playlist.songs.length) {
@@ -334,7 +334,7 @@ export class UserDataService {
     getPlaylist(userId: string, playlistName: string): Playlist | null {
         const userData = this.getUserData(userId);
         return userData.playlists.find(
-            p => p.name.toLowerCase() === playlistName.toLowerCase()
+            p => p.name.toLowerCase() === playlistName.toLowerCase(),
         ) || null;
     }
 
@@ -358,7 +358,7 @@ export class UserDataService {
         const initialLength = userData.playlists.length;
 
         userData.playlists = userData.playlists.filter(
-            p => p.name.toLowerCase() !== playlistName.toLowerCase()
+            p => p.name.toLowerCase() !== playlistName.toLowerCase(),
         );
 
         if (userData.playlists.length !== initialLength) {
