@@ -7,18 +7,16 @@ import type {
     Collection,
     ColorResolvable } from 'discord.js';
 import {
-    EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
     StringSelectMenuBuilder,
     ComponentType,
 } from 'discord.js';
-import type { SongInfo } from '../services/userDataService';
+import type { ISongInfo } from '../services/userDataService';
 import { MusicCollectionService } from '../services/musicCollectionService';
 import { MapleApiService } from '../services/mapleApi';
 import { VoiceManager } from '../utils/voiceManager';
-import { Readable } from 'stream';
 
 export class InteractionHandler {
     private commands: Collection<string, any>;
@@ -89,18 +87,18 @@ export class InteractionHandler {
         }
         // Direct play/queue from search results
         else if (customId.startsWith('play_selected_')) {
-            const mapId = parseInt(customId.replace('play_selected_', ''));
+            const mapId = parseInt(customId.replace('play_selected_', ''), 10);
             await this.handlePlaySelected(interaction, mapId);
         } else if (customId.startsWith('queue_selected_')) {
-            const mapId = parseInt(customId.replace('queue_selected_', ''));
+            const mapId = parseInt(customId.replace('queue_selected_', ''), 10);
             await this.handleQueueSelected(interaction, mapId);
         }
         // Handle favorite and playlist buttons
         else if (customId.startsWith('favorite_map_')) {
-            const mapId = parseInt(customId.replace('favorite_map_', ''));
+            const mapId = parseInt(customId.replace('favorite_map_', ''), 10);
             await this.handleAddMapToFavorites(interaction, mapId);
         } else if (customId.startsWith('add_to_playlist_')) {
-            const mapId = parseInt(customId.replace('add_to_playlist_', ''));
+            const mapId = parseInt(customId.replace('add_to_playlist_', ''), 10);
             await this.handleAddMapToPlaylist(interaction, mapId);
         }
     }
@@ -361,7 +359,7 @@ export class InteractionHandler {
             }
 
             // Create the SongInfo object
-            const songInfo: SongInfo = {
+            const songInfo: ISongInfo = {
                 mapId: mapInfo.id,
                 mapName: mapInfo.name,
                 streetName: mapInfo.streetName,
@@ -446,7 +444,7 @@ export class InteractionHandler {
 
                         if (success) {
                             // Add the map to the playlist
-                            const songInfo: SongInfo = {
+                            const songInfo: ISongInfo = {
                                 mapId: mapInfo.id,
                                 mapName: mapInfo.name,
                                 streetName: mapInfo.streetName,
@@ -539,7 +537,7 @@ export class InteractionHandler {
 
                     if (success) {
                         // Add the map to the playlist
-                        const songInfo: SongInfo = {
+                        const songInfo: ISongInfo = {
                             mapId: mapInfo.id,
                             mapName: mapInfo.name,
                             streetName: mapInfo.streetName,
@@ -574,7 +572,7 @@ export class InteractionHandler {
                 }
 
                 // Add to existing playlist
-                const songInfo: SongInfo = {
+                const songInfo: ISongInfo = {
                     mapId: mapInfo.id,
                     mapName: mapInfo.name,
                     streetName: mapInfo.streetName,

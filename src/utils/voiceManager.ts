@@ -1,4 +1,8 @@
 // src/utils/voiceManager.ts (updated with queue system)
+import type {
+    AudioResource,
+    VoiceConnection,
+    AudioPlayer } from '@discordjs/voice';
 import {
     joinVoiceChannel,
     createAudioPlayer,
@@ -7,27 +11,26 @@ import {
     VoiceConnectionStatus,
     entersState,
     getVoiceConnection,
-    AudioResource,
 } from '@discordjs/voice';
 import type { Interaction } from 'discord.js';
-import { CommandInteraction, GuildMember } from 'discord.js';
 import type { Readable } from 'stream';
-import type { SongInfo } from '../services/userDataService';
+import type { ISongInfo } from '../services/userDataService';
+import { MapleApiService } from '../services/mapleApi';
 
 // Queue item interface
-interface QueueItem {
-    song: SongInfo;
+interface IQueueItem {
+    song: ISongInfo;
     requestedBy: string; // User ID who requested the song
 }
 
 export class VoiceManager {
-    private static connections = new Map();
-    private static players = new Map();
-    private static resources = new Map();
+    private static connections = new Map<string, VoiceConnection>();
+    private static players = new Map<string, AudioPlayer>();
+    private static resources = new Map<string, AudioResource>();
     private static volumes = new Map<string, number>(); // Store volume levels per guild
     private static DEFAULT_VOLUME = 0.2; // 20% volume by default
-    private static currentlyPlaying = new Map<string, SongInfo>();
-    private static queues = new Map<string, QueueItem[]>(); // Store queues per guild
+    private static currentlyPlaying = new Map<string, ISongInfo>();
+    private static queues = new Map<string, IQueueItem[]>(); // Store queues per guild
     private static loopMode = new Map<string, 'none' | 'song' | 'queue'>(); // Loop modes per guild
 
     /**
@@ -182,7 +185,7 @@ export class VoiceManager {
                 }
 
                 // Get the volume for this guild (default if not set)
-                const volume = this.volumes.get(guild.id) || this.DEFAULT_VOLUME;
+                const volume = this.volumes.get(guild.id) ?? this.DEFAULT_VOLUME;
                 console.log(`[DEBUG] Using volume level: ${volume}`);
 
                 // Create and play audio resource with volume
@@ -203,7 +206,7 @@ export class VoiceManager {
                 const mapMatch = mapName.match(/(.+) \((.+)\)/);
                 if (mapMatch && interaction.guildId) {
                     // Assuming the format is "MapName (StreetName)"
-                    const songInfo: SongInfo = {
+                    const songInfo: ISongInfo = {
                         mapId: Number(mapId),
                         mapName: mapMatch[1],
                         streetName: mapMatch[2],
@@ -220,15 +223,17 @@ export class VoiceManager {
                     console.log('[DEBUG] Player is now playing audio');
                 });
 
-                player.on(AudioPlayerStatus.Idle, async () => {
-                    console.log('[DEBUG] Player is idle - playback completed');
+                player.on(AudioPlayerStatus.Idle, () => {
+                    void (async () => {
+                        console.log('[DEBUG] Player is idle - playback completed');
 
-                    // Check if there are more songs in the queue
-                    if (interaction.guildId && this.queues.has(interaction.guildId)) {
-                        const queue = this.queues.get(interaction.guildId)!;
+                        // Check if there are more songs in the queue
+                        if (interaction.guildId && this.queues.has(interaction.guildId)) {
+                        const queue = this.queues.get(interaction.guildId);
+                        if (!queue) return;
 
                         // Check if we need to loop the current song
-                        const loopState = this.loopMode.get(interaction.guildId) || 'none';
+                        const loopState = this.loopMode.get(interaction.guildId) ?? 'none';
                         const currentSong = this.currentlyPlaying.get(interaction.guildId);
 
                         if (loopState === 'song' && currentSong) {
@@ -237,7 +242,7 @@ export class VoiceManager {
 
                             try {
                                 // Get new stream for the same song
-                                const mapleApi = new (await import('../services/mapleApi')).MapleApiService();
+                                const mapleApi = new MapleApiService();
                                 const newStream = await mapleApi.getMapBgmStream(currentSong.mapId);
 
                                 if (newStream) {
@@ -259,16 +264,20 @@ export class VoiceManager {
                             console.log('[DEBUG] Playing next song in queue');
 
                             // Get the next song (remove from queue)
-                            const nextItem = loopState === 'queue' ? queue[0] : queue.shift()!;
+                            const nextItem = loopState === 'queue' ? queue[0] : queue.shift();
+                            if (!nextItem) return;
 
                             // If we're in queue loop mode, add the song back to the end of the queue
                             if (loopState === 'queue') {
-                                queue.push(queue.shift()!);
+                                const firstItem = queue.shift();
+                                if (firstItem) {
+                                    queue.push(firstItem);
+                                }
                             }
 
                             try {
                                 // Get stream for the next song
-                                const mapleApi = new (await import('../services/mapleApi')).MapleApiService();
+                                const mapleApi = new MapleApiService();
                                 const newStream = await mapleApi.getMapBgmStream(nextItem.song.mapId);
 
                                 if (newStream) {
@@ -284,7 +293,8 @@ export class VoiceManager {
                                     // Notify that the next song is playing
                                     if (replyInteraction.isRepliable()) {
                                         await replyInteraction.followUp({
-                                            content: `Now playing next song: ${nextItem.song.mapName} (${nextItem.song.streetName})`,
+                                            content: 'Now playing next song: ' +
+                                                `${nextItem.song.mapName} (${nextItem.song.streetName})`,
                                         });
                                     }
                                     return;
@@ -309,7 +319,8 @@ export class VoiceManager {
                         this.connections.delete(guild.id);
                         this.players.delete(guild.id);
                         this.resources.delete(guild.id);
-                    }
+                        }
+                    })();
                 });
 
                 player.on('error', (error) => {
@@ -321,7 +332,8 @@ export class VoiceManager {
                 });
 
                 // Handle disconnections
-                connection.on(VoiceConnectionStatus.Disconnected, async () => {
+                connection.on(VoiceConnectionStatus.Disconnected, () => {
+                    void (async () => {
                     console.log('[DEBUG] Voice disconnected, attempting reconnect...');
                     try {
                         await Promise.race([
@@ -334,7 +346,8 @@ export class VoiceManager {
                         this.connections.delete(guild.id);
                         this.players.delete(guild.id);
                         this.resources.delete(guild.id);
-                    }
+                        }
+                    })();
                 });
 
                 return true;
@@ -410,7 +423,7 @@ export class VoiceManager {
      */
     static getVolume(guildId: string): number {
         // Return volume as percentage (0-100)
-        return (this.volumes.get(guildId) || this.DEFAULT_VOLUME) * 100;
+        return (this.volumes.get(guildId) ?? this.DEFAULT_VOLUME) * 100;
     }
 
     /**
@@ -418,8 +431,8 @@ export class VoiceManager {
      * @param guildId - The Discord guild ID
      * @returns The song information if a song is playing, or null otherwise
      */
-    static getCurrentlyPlaying(guildId: string): SongInfo | null {
-        return this.currentlyPlaying.get(guildId) || null;
+    static getCurrentlyPlaying(guildId: string): ISongInfo | null {
+        return this.currentlyPlaying.get(guildId) ?? null;
     }
 
     /**
@@ -440,7 +453,7 @@ export class VoiceManager {
         region: string = 'gms',
         version: string = '253',
     ): Promise<boolean> {
-        const song: SongInfo = {
+        const song: ISongInfo = {
             mapId,
             mapName,
             streetName,
@@ -452,14 +465,18 @@ export class VoiceManager {
             this.queues.set(guildId, []);
         }
 
-        const queue = this.queues.get(guildId)!;
+        const queue = this.queues.get(guildId);
+        if (!queue) {
+            console.error('Queue not found after initialization');
+            return false;
+        }
         queue.push({ song, requestedBy: 'user' });  // We don't have user ID here
 
         // If nothing is playing, start playing this song
         if (!this.currentlyPlaying.has(guildId)) {
             try {
                 // Get the BGM stream
-                const mapleApi = new (await import('../services/mapleApi')).MapleApiService();
+                const mapleApi = new MapleApiService();
                 const stream = await mapleApi.getMapBgmStream(mapId);
 
                 if (stream) {
@@ -469,7 +486,8 @@ export class VoiceManager {
                         guild: { id: guildId },
                         guildId,
                         isRepliable: () => false,
-                    } as any;
+                        user: { tag: 'System' },
+                    } as unknown as Interaction;
 
                     await this.playAudioInChannel(
                         dummyInteraction,
@@ -507,12 +525,15 @@ export class VoiceManager {
      * @param index - The index of the song to remove from the queue (0-based)
      * @returns The removed item or null if the index was invalid
      */
-    static removeFromQueue(guildId: string, index: number): QueueItem | null {
+    static removeFromQueue(guildId: string, index: number): IQueueItem | null {
         if (!this.queues.has(guildId)) {
             return null;
         }
 
-        const queue = this.queues.get(guildId)!;
+        const queue = this.queues.get(guildId);
+        if (!queue) {
+            return null;
+        }
 
         if (index < 0 || index >= queue.length) {
             return null;
@@ -527,8 +548,8 @@ export class VoiceManager {
      * @param guildId - The Discord guild ID
      * @returns An array of queued items, or an empty array if no queue exists
      */
-    static getQueue(guildId: string): QueueItem[] {
-        return this.queues.get(guildId) || [];
+    static getQueue(guildId: string): IQueueItem[] {
+        return this.queues.get(guildId) ?? [];
     }
 
     /**
@@ -541,7 +562,10 @@ export class VoiceManager {
             return false;
         }
 
-        const queue = this.queues.get(guildId)!;
+        const queue = this.queues.get(guildId);
+        if (!queue) {
+            return false;
+        }
 
         if (queue.length <= 1) {
             return false;
@@ -591,7 +615,7 @@ export class VoiceManager {
      * @returns The current loop mode ('none', 'song', or 'queue')
      */
     static getLoopMode(guildId: string): string {
-        return this.loopMode.get(guildId) || 'none';
+        return this.loopMode.get(guildId) ?? 'none';
     }
 
     /**
@@ -606,7 +630,10 @@ export class VoiceManager {
             return false;
         }
 
-        const queue = this.queues.get(guildId)!;
+        const queue = this.queues.get(guildId);
+        if (!queue) {
+            return false;
+        }
 
         if (fromIndex < 0 || fromIndex >= queue.length || toIndex < 0 || toIndex >= queue.length) {
             return false;

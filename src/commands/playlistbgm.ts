@@ -6,18 +6,10 @@ import type {
     ChatInputCommandInteraction } from 'discord.js';
 import {
     SlashCommandBuilder,
-    EmbedBuilder,
     ActionRowBuilder,
-    StringSelectMenuBuilder,
     ButtonBuilder,
     ButtonStyle,
-    StringSelectMenuInteraction,
-    ButtonInteraction,
-    ComponentType,
-    StringSelectMenuOptionBuilder,
-    Interaction,
 } from 'discord.js';
-import { SongInfo } from '../services/userDataService';
 import { VoiceManager } from '../utils/voiceManager';
 import { MusicCollectionService } from '../services/musicCollectionService';
 
@@ -156,7 +148,9 @@ export class PlaylistbgmCommand {
 
             await interaction.followUp({ embeds: [embed] });
         } else {
-            await interaction.followUp(`You already have a playlist named "${playlistName}". Please choose a different name.`);
+            await interaction.followUp(
+                `You already have a playlist named "${playlistName}". Please choose a different name.`,
+            );
         }
     }
 
@@ -177,7 +171,9 @@ export class PlaylistbgmCommand {
         const playlist = this.musicService.getPlaylist(interaction.user.id, playlistName);
 
         if (!playlist) {
-            await interaction.followUp(`You don't have a playlist named "${playlistName}". Create one first using /playlist create.`);
+            await interaction.followUp(
+                `You don't have a playlist named "${playlistName}". Create one first using /playlist create.`,
+            );
             return;
         }
 
@@ -376,10 +372,14 @@ export class PlaylistbgmCommand {
         // Create confirmation message
         const embed = this.musicService.createBaseEmbed('🗑️ Delete Playlist?')
             .setColor('#FF0000' as ColorResolvable)
-            .setDescription(`Are you sure you want to delete your playlist **${playlistName}**?\nThis action cannot be undone.`)
+            .setDescription(
+                `Are you sure you want to delete your playlist **${playlistName}**?\n` +
+                'This action cannot be undone.',
+            )
             .addFields({
                 name: 'Playlist Details',
-                value: `Contains ${playlist.songs.length} songs\nCreated: ${new Date(playlist.createdAt).toLocaleDateString()}`,
+                value: `Contains ${playlist.songs.length} songs\n` +
+                       `Created: ${new Date(playlist.createdAt).toLocaleDateString()}`,
             });
 
         // Create confirmation buttons using the centralized service

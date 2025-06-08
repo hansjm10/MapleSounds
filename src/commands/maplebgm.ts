@@ -6,7 +6,6 @@ import type {
     ChatInputCommandInteraction,
 } from 'discord.js';
 import {
-    CommandInteraction,
     SlashCommandBuilder,
     StringSelectMenuBuilder,
     ActionRowBuilder,
@@ -14,13 +13,12 @@ import {
     EmbedBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ButtonInteraction,
 } from 'discord.js';
-import type { MapInfo } from '../services/mapleApi';
+import type { IMapInfo } from '../services/mapleApi';
 import { MapleApiService } from '../services/mapleApi';
 import { MusicCollectionService } from '../services/musicCollectionService';
 import { VoiceManager } from '../utils/voiceManager';
-import type { SongInfo } from '../services/userDataService';
+import type { ISongInfo } from '../services/userDataService';
 
 export class MaplebgmCommand {
     private mapleApi: MapleApiService;
@@ -72,11 +70,11 @@ export class MaplebgmCommand {
         await interaction.deferReply();
 
         const searchTerm = interaction.options.getString('search');
-        const action = interaction.options.getString('action') || 'play'; // Default to play
+        const action = interaction.options.getString('action') ?? 'play'; // Default to play
 
         // Get optional region and version parameters
-        const region = interaction.options.getString('region') || 'gms'; // Default to GMS
-        const version = interaction.options.getString('version') || '253'; // Default to 253
+        const region = interaction.options.getString('region') ?? 'gms'; // Default to GMS
+        const version = interaction.options.getString('version') ?? '253'; // Default to 253
 
         if (!searchTerm) {
             await interaction.followUp('Please provide a search term for the map.');
@@ -90,19 +88,39 @@ export class MaplebgmCommand {
         const maps = await apiService.searchMaps(searchTerm);
 
         if (maps.length === 0) {
-            await interaction.followUp(`No maps found for "${searchTerm}" in ${region.toUpperCase()} v${version}. Try a different search term or region.`);
+            await interaction.followUp(
+                `No maps found for "${searchTerm}" in ${region.toUpperCase()} v${version}. ` +
+                'Try a different search term or region.',
+            );
             return;
         }
 
         // Create a search results embed
-        const searchEmbed = this.musicService.createBaseEmbed(`🔍 MapleStory BGM Search - ${action === 'play' ? 'Play Now' : action === 'queue' ? 'Add to Queue' : 'Save Only'}`)
-            .setDescription(`Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\nSelect one to ${action === 'play' ? 'play' : action === 'queue' ? 'add to queue' : 'view details'}:`)
-            .setColor(action === 'play' ? '#00FF00' : action === 'queue' ? '#0099FF' : '#FFA500' as ColorResolvable);
+        let embedTitle = '🔍 MapleStory BGM Search - ';
+        let actionText = '';
+        let embedColor: ColorResolvable = '#FFA500';
+
+        if (action === 'play') {
+            embedTitle += 'Play Now';
+            actionText = 'play';
+            embedColor = '#00FF00';
+        } else if (action === 'queue') {
+            embedTitle += 'Add to Queue';
+            actionText = 'add to queue';
+            embedColor = '#0099FF';
+        } else {
+            embedTitle += 'Save Only';
+            actionText = 'view details';
+        }
+
+        const searchEmbed = this.musicService.createBaseEmbed(embedTitle)
+            .setDescription(`Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\nSelect one to ${actionText}:`)
+            .setColor(embedColor);
 
         // Create a select menu for maps
         const mapSelectMenu = new StringSelectMenuBuilder()
             .setCustomId(`map_select_${action}`)
-            .setPlaceholder(`Select a map to ${action === 'play' ? 'play' : action === 'queue' ? 'add to queue' : 'view'}`)
+            .setPlaceholder(`Select a map to ${actionText}`)
             .addOptions(
                 maps.slice(0, 25).map(map => ({
                     label: map.name,
@@ -128,7 +146,7 @@ export class MaplebgmCommand {
         collector.on('collect', async (selectInteraction: StringSelectMenuInteraction) => {
             await selectInteraction.deferUpdate();
 
-            const selectedMapId = parseInt(selectInteraction.values[0]);
+            const selectedMapId = parseInt(selectInteraction.values[0], 10);
             const selectedMap = maps.find(map => map.id === selectedMapId);
 
             if (!selectedMap) {
@@ -137,8 +155,8 @@ export class MaplebgmCommand {
             }
 
             try {
-                // Convert to SongInfo format
-                const songInfo: SongInfo = {
+                // Convert to ISongInfo format
+                const songInfo: ISongInfo = {
                     mapId: selectedMap.id,
                     mapName: selectedMap.name,
                     streetName: selectedMap.streetName,
@@ -186,7 +204,7 @@ export class MaplebgmCommand {
     // Play the song now in voice channel
     private async playNow(
         interaction: ChatInputCommandInteraction,
-        songInfo: SongInfo,
+        songInfo: ISongInfo,
         apiService: MapleApiService,
     ): Promise<void> {
         try {
@@ -199,7 +217,9 @@ export class MaplebgmCommand {
             const stream = await apiService.getMapBgmStream(songInfo.mapId);
 
             if (!stream) {
-                await interaction.followUp(`Unable to play the BGM for "${songInfo.mapName}". The song might not be available.`);
+                await interaction.followUp(
+                    `Unable to play the BGM for "${songInfo.mapName}". The song might not be available.`,
+                );
                 return;
             }
 
@@ -258,7 +278,7 @@ export class MaplebgmCommand {
     // Add the song to queue
     private async addToQueue(
         interaction: ChatInputCommandInteraction,
-        songInfo: SongInfo,
+        songInfo: ISongInfo,
         apiService: MapleApiService,
     ): Promise<void> {
         try {
@@ -317,7 +337,7 @@ export class MaplebgmCommand {
     // Show save options for the selected map
     private async showSaveOptions(
         interaction: ChatInputCommandInteraction,
-        map: MapInfo,
+        map: IMapInfo,
         apiService: MapleApiService,
     ): Promise<void> {
         // Get map details

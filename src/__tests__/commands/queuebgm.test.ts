@@ -1,8 +1,7 @@
 import { QueuebgmCommand } from '../../commands/queuebgm';
 import { VoiceManager } from '../../utils/voiceManager';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { SlashCommandBuilder } from 'discord.js';
-import type { SongInfo } from '../../services/userDataService';
+import type { ISongInfo } from '../../services/userDataService';
 
 // Mock the VoiceManager
 jest.mock('../../utils/voiceManager');
@@ -22,8 +21,8 @@ const createMockInteraction = (subcommand: string, options: any = {}) => {
         guildId: 'mock-guild-123',
         options: {
             getSubcommand: jest.fn().mockReturnValue(subcommand),
-            getInteger: jest.fn((name) => options[name] || null),
-            getString: jest.fn((name) => options[name] || null),
+            getInteger: jest.fn((name) => options[name] ?? null),
+            getString: jest.fn((name) => options[name] ?? null),
         },
         user: {
             id: 'mock-user-123',
@@ -35,7 +34,7 @@ const createMockInteraction = (subcommand: string, options: any = {}) => {
 
 describe('QueuebgmCommand', () => {
     let queuebgmCommand: QueuebgmCommand;
-    let mockSong: SongInfo;
+    let mockSong: ISongInfo;
 
     beforeEach(() => {
         queuebgmCommand = new QueuebgmCommand();

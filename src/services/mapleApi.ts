@@ -1,7 +1,8 @@
 // src/services/mapleApi.ts
 import axios from 'axios';
+import type { Readable } from 'stream';
 
-export interface MapInfo {
+export interface IMapInfo {
     name: string;
     streetName: string;
     id: number;
@@ -25,9 +26,9 @@ export class MapleApiService {
      * @param searchTerm - The text to search for in map names
      * @returns A promise that resolves to an array of matching map information
      */
-    async searchMaps(searchTerm: string): Promise<MapInfo[]> {
+    async searchMaps(searchTerm: string): Promise<IMapInfo[]> {
         try {
-            const response = await axios.get<MapInfo[]>(
+            const response = await axios.get<IMapInfo[]>(
                 `${this.baseUrl}/${this.region}/${this.version}/map`,
                 {
                     params: {
@@ -51,14 +52,14 @@ export class MapleApiService {
      * @param mapId - The numeric ID of the map to retrieve
      * @returns A promise that resolves to the map information or null if not found
      */
-    async getMapInfo(mapId: number): Promise<MapInfo | null> {
+    async getMapInfo(mapId: number): Promise<IMapInfo | null> {
         try {
             // First try to get detailed info
             const detailsResponse = await this.getMapDetails(mapId);
             if (detailsResponse) {
                 return {
-                    name: detailsResponse.name || `Map ${mapId}`,
-                    streetName: detailsResponse.streetName || 'Unknown Location',
+                    name: detailsResponse.name ?? `Map ${mapId}`,
+                    streetName: detailsResponse.streetName ?? 'Unknown Location',
                     id: mapId,
                     region: this.region,
                     version: this.version,
@@ -85,7 +86,7 @@ export class MapleApiService {
      * @returns A promise that resolves to a readable stream of the BGM audio
      * @throws Will throw an error if the BGM stream cannot be retrieved
      */
-    async getMapBgmStream(mapId: number): Promise<any> {
+    async getMapBgmStream(mapId: number): Promise<Readable> {
         try {
             const response = await axios.get(
                 `${this.baseUrl}/${this.region}/${this.version}/map/${mapId}/bgm`,
@@ -93,7 +94,7 @@ export class MapleApiService {
                     responseType: 'stream',
                 },
             );
-            return response.data;
+            return response.data as Readable;
         } catch (error) {
             console.error('Error getting BGM stream:', error);
             throw new Error('Failed to get BGM stream');

@@ -6,7 +6,6 @@ import type {
     ButtonInteraction,
     ChatInputCommandInteraction } from 'discord.js';
 import {
-    CommandInteraction,
     SlashCommandBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder,
@@ -15,9 +14,9 @@ import {
     ButtonBuilder,
     ButtonStyle,
 } from 'discord.js';
-import type { MapInfo } from '../services/mapleApi';
+import type { IMapInfo } from '../services/mapleApi';
 import { MapleApiService } from '../services/mapleApi';
-import type { SongInfo } from '../services/userDataService';
+import type { ISongInfo } from '../services/userDataService';
 import { MusicCollectionService } from '../services/musicCollectionService';
 
 export class FindbgmCommand {
@@ -61,7 +60,9 @@ export class FindbgmCommand {
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
         await interaction.deferReply();
 
-        console.log(`[DEBUG] Find command started - Guild ID: ${interaction.guildId}, Channel ID: ${interaction.channelId}`);
+        console.log(
+            `[DEBUG] Find command started - Guild ID: ${interaction.guildId}, Channel ID: ${interaction.channelId}`,
+        );
 
         const searchTerm = interaction.options.getString('search');
         if (!searchTerm) {
@@ -70,8 +71,8 @@ export class FindbgmCommand {
         }
 
         // Get optional region and version parameters
-        const region = interaction.options.getString('region') || 'gms'; // Default to GMS
-        const version = interaction.options.getString('version') || '253'; // Default to 253
+        const region = interaction.options.getString('region') ?? 'gms'; // Default to GMS
+        const version = interaction.options.getString('version') ?? '253'; // Default to 253
 
         // Create specific API instance with the provided region and version
         const apiService = new MapleApiService(region, version);
@@ -81,7 +82,10 @@ export class FindbgmCommand {
         const maps = await apiService.searchMaps(searchTerm);
 
         if (maps.length === 0) {
-            await interaction.followUp(`No maps found for "${searchTerm}" in ${region.toUpperCase()} v${version}. Try a different search term or region.`);
+            await interaction.followUp(
+                `No maps found for "${searchTerm}" in ${region.toUpperCase()} v${version}. ` +
+                'Try a different search term or region.',
+            );
             return;
         }
 
@@ -91,7 +95,10 @@ export class FindbgmCommand {
         const searchEmbed = new EmbedBuilder()
             .setColor('#FFA500' as ColorResolvable)
             .setTitle('🔍 MapleStory Map Search')
-            .setDescription(`Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\nSelect one to view details or add to a playlist:`)
+            .setDescription(
+                `Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\n` +
+                'Select one to view details or add to a playlist:',
+            )
             .setThumbnail('https://i.imgur.com/nGyPbIj.png') // MapleStory logo
             .setFooter({ text: 'MapleStory BGM Finder | Select a map from the dropdown menu below' });
 
@@ -129,7 +136,7 @@ export class FindbgmCommand {
             // Defer the update to acknowledge the interaction
             await selectInteraction.deferUpdate();
 
-            const selectedMapId = parseInt(selectInteraction.values[0]);
+            const selectedMapId = parseInt(selectInteraction.values[0], 10);
             const selectedMap = maps.find(map => map.id === selectedMapId);
 
             if (!selectedMap) {
@@ -226,10 +233,10 @@ export class FindbgmCommand {
     }
 
     // Handle adding a map to favorites
-    private async handleAddToFavorites(interaction: ButtonInteraction, map: MapInfo): Promise<void> {
+    private async handleAddToFavorites(interaction: ButtonInteraction, map: IMapInfo): Promise<void> {
         await interaction.deferUpdate();
 
-        const songInfo: SongInfo = {
+        const songInfo: ISongInfo = {
             mapId: map.id,
             mapName: map.name,
             streetName: map.streetName,
@@ -258,7 +265,7 @@ export class FindbgmCommand {
     }
 
     // Handle adding a map to playlist
-    private async handleAddToPlaylist(interaction: ButtonInteraction, map: MapInfo): Promise<void> {
+    private async handleAddToPlaylist(interaction: ButtonInteraction, map: IMapInfo): Promise<void> {
         await interaction.deferUpdate();
 
         // Get user's playlists
@@ -295,7 +302,7 @@ export class FindbgmCommand {
             createCollector.on('collect', async (buttonInt: ButtonInteraction) => {
                 if (buttonInt.customId === `create_playlist_for_${map.id}`) {
                     // Show modal for playlist name
-                    const modal = {
+                    const _modal = {
                         title: 'Create Playlist',
                         custom_id: `create_playlist_modal_${map.id}`,
                         components: [{
@@ -326,7 +333,7 @@ export class FindbgmCommand {
 
                     if (success) {
                         // Add the map to the playlist
-                        const songInfo: SongInfo = {
+                        const songInfo: ISongInfo = {
                             mapId: map.id,
                             mapName: map.name,
                             streetName: map.streetName,
@@ -421,7 +428,7 @@ export class FindbgmCommand {
 
                 if (success) {
                     // Add the map to the playlist
-                    const songInfo: SongInfo = {
+                    const songInfo: ISongInfo = {
                         mapId: map.id,
                         mapName: map.name,
                         streetName: map.streetName,
@@ -456,7 +463,7 @@ export class FindbgmCommand {
             }
 
             // Add to existing playlist
-            const songInfo: SongInfo = {
+            const songInfo: ISongInfo = {
                 mapId: map.id,
                 mapName: map.name,
                 streetName: map.streetName,

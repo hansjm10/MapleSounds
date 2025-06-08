@@ -25,7 +25,7 @@ const commands = [
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN as string);
 
 // Deploy commands function
-(async () => {
+void (async () => {
     try {
         console.log('Started refreshing application (/) commands.');
 

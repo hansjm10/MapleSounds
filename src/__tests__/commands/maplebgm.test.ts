@@ -2,7 +2,6 @@ import { MaplebgmCommand } from '../../commands/maplebgm';
 import { MapleApiService } from '../../services/mapleApi';
 import { VoiceManager } from '../../utils/voiceManager';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { Readable } from 'stream';
 
 // Mock dependencies
 jest.mock('../../services/mapleApi');

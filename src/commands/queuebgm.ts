@@ -134,7 +134,11 @@ export class QueuebgmCommand {
     }
 
     private async handleShowQueue(interaction: ChatInputCommandInteraction): Promise<void> {
-        const guildId = interaction.guildId!;
+        const guildId = interaction.guildId;
+        if (!guildId) {
+            await interaction.followUp('This command can only be used in a server.');
+            return;
+        }
         const queue = VoiceManager.getQueue(guildId);
         const currentlyPlaying = VoiceManager.getCurrentlyPlaying(guildId);
         const loopMode = VoiceManager.getLoopMode(guildId);
@@ -170,7 +174,8 @@ export class QueuebgmCommand {
             });
 
             embed.setFooter({
-                text: `Total songs: ${queue.length} | Loop mode: ${loopMode} | Volume: ${VoiceManager.getVolume(guildId)}%`,
+                text: `Total songs: ${queue.length} | Loop mode: ${loopMode} | ` +
+                      `Volume: ${VoiceManager.getVolume(guildId)}%`,
             });
         } else {
             embed.addFields({
@@ -258,7 +263,11 @@ export class QueuebgmCommand {
     }
 
     private async handleShuffleQueue(interaction: ChatInputCommandInteraction): Promise<void> {
-        const guildId = interaction.guildId!;
+        const guildId = interaction.guildId;
+        if (!guildId) {
+            await interaction.followUp('This command can only be used in a server.');
+            return;
+        }
         const shuffled = VoiceManager.shuffleQueue(guildId);
 
         if (shuffled) {
@@ -270,7 +279,11 @@ export class QueuebgmCommand {
     }
 
     private async handleClearQueue(interaction: ChatInputCommandInteraction): Promise<void> {
-        const guildId = interaction.guildId!;
+        const guildId = interaction.guildId;
+        if (!guildId) {
+            await interaction.followUp('This command can only be used in a server.');
+            return;
+        }
         const cleared = VoiceManager.clearQueue(guildId);
 
         if (cleared) {
@@ -281,8 +294,16 @@ export class QueuebgmCommand {
     }
 
     private async handleRemoveFromQueue(interaction: ChatInputCommandInteraction): Promise<void> {
-        const guildId = interaction.guildId!;
-        const position = interaction.options.getInteger('position')!;
+        const guildId = interaction.guildId;
+        if (!guildId) {
+            await interaction.followUp('This command can only be used in a server.');
+            return;
+        }
+        const position = interaction.options.getInteger('position');
+        if (!position) {
+            await interaction.followUp('Please provide a valid position.');
+            return;
+        }
 
         // Convert to 0-based index
         const index = position - 1;
@@ -298,7 +319,11 @@ export class QueuebgmCommand {
     }
 
     private async handleSetLoopMode(interaction: ChatInputCommandInteraction): Promise<void> {
-        const guildId = interaction.guildId!;
+        const guildId = interaction.guildId;
+        if (!guildId) {
+            await interaction.followUp('This command can only be used in a server.');
+            return;
+        }
         const mode = interaction.options.getString('mode') as 'none' | 'song' | 'queue';
 
         const setMode = VoiceManager.setLoopMode(guildId, mode);
@@ -313,7 +338,11 @@ export class QueuebgmCommand {
     }
 
     private async handleSkipToNext(interaction: ChatInputCommandInteraction): Promise<void> {
-        const guildId = interaction.guildId!;
+        const guildId = interaction.guildId;
+        if (!guildId) {
+            await interaction.followUp('This command can only be used in a server.');
+            return;
+        }
         const skipped = VoiceManager.skipToNext(guildId);
 
         if (skipped) {
@@ -324,9 +353,17 @@ export class QueuebgmCommand {
     }
 
     private async handleMoveInQueue(interaction: ChatInputCommandInteraction): Promise<void> {
-        const guildId = interaction.guildId!;
-        const fromPosition = interaction.options.getInteger('from')!;
-        const toPosition = interaction.options.getInteger('to')!;
+        const guildId = interaction.guildId;
+        if (!guildId) {
+            await interaction.followUp('This command can only be used in a server.');
+            return;
+        }
+        const fromPosition = interaction.options.getInteger('from');
+        const toPosition = interaction.options.getInteger('to');
+        if (!fromPosition || !toPosition) {
+            await interaction.followUp('Please provide valid positions.');
+            return;
+        }
 
         // Convert to 0-based indices
         const fromIndex = fromPosition - 1;
@@ -335,7 +372,9 @@ export class QueuebgmCommand {
         const moved = VoiceManager.moveInQueue(guildId, fromIndex, toIndex);
 
         if (moved) {
-            await interaction.followUp(`Moved song from position ${fromPosition} to position ${toPosition} in the queue.`);
+            await interaction.followUp(
+                `Moved song from position ${fromPosition} to position ${toPosition} in the queue.`,
+            );
             await this.handleShowQueue(interaction);
         } else {
             await interaction.followUp('Failed to move song. Queue may be empty or positions are out of range.');
