@@ -10,6 +10,15 @@ export interface IMapInfo {
     version: string;
 }
 
+export interface IMapDetails {
+    id: number;
+    name: string;
+    streetName: string;
+    region: string;
+    version: string;
+    bgmUrl?: string;
+}
+
 export class MapleApiService {
     private readonly baseUrl: string;
     private readonly region: string;
@@ -36,7 +45,7 @@ export class MapleApiService {
                     },
                 },
             );
-            return response.data.map(map => ({
+            return response.data.map((map: IMapInfo) => ({
                 ...map,
                 region: this.region,
                 version: this.version,
@@ -106,12 +115,12 @@ export class MapleApiService {
      * @param mapId - The numeric ID of the map to retrieve details for
      * @returns A promise that resolves to the detailed map information or null if not found
      */
-    async getMapDetails(mapId: number): Promise<any> {
+    async getMapDetails(mapId: number): Promise<IMapDetails | null> {
         try {
             const response = await axios.get(
                 `${this.baseUrl}/${this.region}/${this.version}/map/${mapId}`,
             );
-            return response.data;
+            return response.data as IMapDetails;
         } catch (error) {
             console.error('Error getting map details:', error);
             return null;

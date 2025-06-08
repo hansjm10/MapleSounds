@@ -1,5 +1,6 @@
 // src/index.ts
 import { Client, GatewayIntentBits, Events, Collection } from 'discord.js';
+import type { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { MaplebgmCommand } from './commands/maplebgm';
 import { StopbgmCommand } from './commands/stopbgm';
@@ -24,8 +25,8 @@ const client = new Client({
 
 // Command collection
 interface ICommand {
-    data: any;
-    execute: (interaction: any) => Promise<void>;
+    data: SlashCommandBuilder;
+    execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
 const commands: Collection<string, ICommand> = new Collection();

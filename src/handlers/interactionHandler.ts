@@ -5,7 +5,9 @@ import type {
     ButtonInteraction,
     StringSelectMenuInteraction,
     Collection,
-    ColorResolvable } from 'discord.js';
+    ColorResolvable,
+    SlashCommandBuilder,
+    ChatInputCommandInteraction } from 'discord.js';
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -18,12 +20,17 @@ import { MusicCollectionService } from '../services/musicCollectionService';
 import { MapleApiService } from '../services/mapleApi';
 import { VoiceManager } from '../utils/voiceManager';
 
+interface IDiscordCommand {
+    data: SlashCommandBuilder;
+    execute(interaction: ChatInputCommandInteraction): Promise<void>;
+}
+
 export class InteractionHandler {
-    private commands: Collection<string, any>;
+    private commands: Collection<string, IDiscordCommand>;
     private musicService: MusicCollectionService;
     private mapleApi: MapleApiService;
 
-    constructor(commands: Collection<string, any>) {
+    constructor(commands: Collection<string, IDiscordCommand>) {
         this.commands = commands;
         this.musicService = MusicCollectionService.getInstance();
         this.mapleApi = new MapleApiService();
@@ -57,7 +64,7 @@ export class InteractionHandler {
     private async handleCommandInteraction(interaction: CommandInteraction): Promise<void> {
         const command = this.commands.get(interaction.commandName);
         if (!command) return;
-        await command.execute(interaction);
+        await command.execute(interaction as ChatInputCommandInteraction);
     }
 
     // Button interaction handler
@@ -260,7 +267,9 @@ export class InteractionHandler {
             // Get the BGM stream
             const stream = await this.mapleApi.getMapBgmStream(mapId);
             if (!stream) {
-                await interaction.followUp(`Unable to play the BGM for "${mapInfo.name}". The song might not be available.`);
+                await interaction.followUp(
+                    `Unable to play the BGM for "${mapInfo.name}". The song might not be available.`,
+                );
                 return;
             }
 
@@ -461,7 +470,9 @@ export class InteractionHandler {
                             if (addSuccess) {
                                 const successEmbed = this.musicService.createBaseEmbed('✅ Playlist Created & Map Added')
                                     .setColor('#00FF00' as ColorResolvable)
-                                    .setDescription(`Created playlist **${playlistName}** and added **${mapInfo.name}** to it!`)
+                                    .setDescription(
+                                        `Created playlist **${playlistName}** and added **${mapInfo.name}** to it!`,
+                                    )
                                     .setFooter({ text: 'Use /playlist view to manage your playlists' });
 
                                 await buttonInt.followUp({
@@ -554,7 +565,9 @@ export class InteractionHandler {
                         if (addSuccess) {
                             const successEmbed = this.musicService.createBaseEmbed('✅ Playlist Created & Map Added')
                                 .setColor('#00FF00' as ColorResolvable)
-                                .setDescription(`Created playlist **${playlistName}** and added **${mapInfo.name}** to it!`)
+                                .setDescription(
+                                    `Created playlist **${playlistName}** and added **${mapInfo.name}** to it!`,
+                                )
                                 .setFooter({ text: 'Use /playlist view to manage your playlists' });
 
                             await selectInt.followUp({

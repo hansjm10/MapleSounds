@@ -114,7 +114,10 @@ export class MaplebgmCommand {
         }
 
         const searchEmbed = this.musicService.createBaseEmbed(embedTitle)
-            .setDescription(`Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\nSelect one to ${actionText}:`)
+            .setDescription(
+                `Found ${maps.length} maps matching **"${searchTerm}"** in ${region.toUpperCase()} v${version}\n` +
+                `Select one to ${actionText}:`,
+            )
             .setColor(embedColor);
 
         // Create a select menu for maps

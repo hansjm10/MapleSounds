@@ -22,6 +22,19 @@ export interface IUserData {
     playlists: IPlaylist[];
 }
 
+interface IUnvalidatedUserData {
+    userId?: string;
+    favorites?: unknown;
+    playlists?: unknown;
+}
+
+interface IUnvalidatedPlaylist {
+    name?: unknown;
+    songs?: unknown;
+    createdAt?: unknown;
+    updatedAt?: unknown;
+}
+
 export class UserDataService {
     private dataPath: string;
     private data: Map<string, IUserData> = new Map();
@@ -53,10 +66,10 @@ export class UserDataService {
                     return;
                 }
 
-                const jsonData = JSON.parse(fileData);
+                const jsonData = JSON.parse(fileData) as Record<string, unknown>;
                 for (const [userId, userData] of Object.entries(jsonData)) {
                     // Ensure proper structure
-                    const validatedData = this.validateUserData(userData as IUserData);
+                    const validatedData = this.validateUserData(userData as IUnvalidatedUserData);
                     this.data.set(userId, validatedData);
                 }
                 console.log(`Loaded user data for ${this.data.size} users`);
@@ -84,16 +97,17 @@ export class UserDataService {
      * as they only run during data loading (once at startup) and for new users.
      * The safety benefits far outweigh the minimal overhead.
      */
-    private validateUserData(userData: any): IUserData {
+    private validateUserData(userData: IUnvalidatedUserData): IUserData {
         // Ensure all required structures exist
         return {
             userId: userData.userId ?? '',
-            favorites: Array.isArray(userData.favorites) ? userData.favorites : [],
-            playlists: Array.isArray(userData.playlists) ? userData.playlists.map((p: any) => ({
-                name: p.name ?? 'Unnamed Playlist',
+            favorites: Array.isArray(userData.favorites) ? userData.favorites as ISongInfo[] : [],
+            playlists: Array.isArray(userData.playlists) ?
+            (userData.playlists as IUnvalidatedPlaylist[]).map((p: IUnvalidatedPlaylist) => ({
+                name: typeof p.name === 'string' ? p.name : 'Unnamed Playlist',
                 songs: Array.isArray(p.songs) ? p.songs : [],
-                createdAt: p.createdAt ?? new Date().toISOString(),
-                updatedAt: p.updatedAt ?? new Date().toISOString(),
+                createdAt: typeof p.createdAt === 'string' ? p.createdAt : new Date().toISOString(),
+                updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date().toISOString(),
             })) : [],
         };
     }
@@ -125,7 +139,7 @@ export class UserDataService {
                 if (typeof value === 'bigint') {
                     return Number(value);
                 }
-                return value;
+                return value as string;
             }, 2));
 
             // Rename is atomic on most filesystems
